@@ -5,6 +5,8 @@ datatype AddressType = IPv4 | IPv6
 datatype NormalizedMappedCIDRMeta = NormalizedMappedCIDRMeta(isIPv4: bool, prefix: int)
 
 function normalizeMappedCIDRMeta(type_: AddressType, prefix: int, isMappedIPv6: bool): NormalizedMappedCIDRMeta
+  requires (type_.IPv4? ==> ((prefix >= 0) && (prefix <= 32)))
+  requires (type_.IPv6? ==> ((prefix >= 0) && (prefix <= 128)))
 {
   if type_.IPv4? then
     NormalizedMappedCIDRMeta(true, prefix)
@@ -16,12 +18,16 @@ function normalizeMappedCIDRMeta(type_: AddressType, prefix: int, isMappedIPv6: 
 }
 
 lemma normalizeMappedCIDRMeta_ensures(type_: AddressType, prefix: int, isMappedIPv6: bool)
+  requires (type_.IPv4? ==> ((prefix >= 0) && (prefix <= 32)))
+  requires (type_.IPv6? ==> ((prefix >= 0) && (prefix <= 128)))
   ensures (type_.IPv4? ==> (normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).isIPv4 == true))
   ensures (type_.IPv4? ==> (normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).prefix == prefix))
   ensures (type_.IPv6? ==> !((isMappedIPv6 && (prefix >= 96))) ==> (normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).isIPv4 == false))
   ensures (type_.IPv6? ==> !((isMappedIPv6 && (prefix >= 96))) ==> (normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).prefix == prefix))
   ensures (type_.IPv6? ==> isMappedIPv6 ==> (prefix >= 96) ==> (normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).isIPv4 == true))
   ensures (type_.IPv6? ==> isMappedIPv6 ==> (prefix >= 96) ==> (normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).prefix == (prefix - 96)))
+  ensures (normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).isIPv4 ==> ((normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).prefix >= 0) && (normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).prefix <= 32)))
+  ensures (!(normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).isIPv4) ==> ((normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).prefix >= 0) && (normalizeMappedCIDRMeta(type_, prefix, isMappedIPv6).prefix <= 128)))
 {
 }
 

@@ -11,12 +11,16 @@ export function normalizeMappedCIDRMeta(
   isMappedIPv6: boolean
 ): NormalizedMappedCIDRMeta {
   //@ verify
+  //@ requires type === 'IPv4' ==> prefix >= 0 && prefix <= 32
+  //@ requires type === 'IPv6' ==> prefix >= 0 && prefix <= 128
   //@ ensures type === 'IPv4' ==> \result.isIPv4 === true
   //@ ensures type === 'IPv4' ==> \result.prefix === prefix
   //@ ensures type === 'IPv6' && !(isMappedIPv6 && prefix >= 96) ==> \result.isIPv4 === false
   //@ ensures type === 'IPv6' && !(isMappedIPv6 && prefix >= 96) ==> \result.prefix === prefix
   //@ ensures type === 'IPv6' && isMappedIPv6 && prefix >= 96 ==> \result.isIPv4 === true
   //@ ensures type === 'IPv6' && isMappedIPv6 && prefix >= 96 ==> \result.prefix === prefix - 96
+  //@ ensures \result.isIPv4 ==> \result.prefix >= 0 && \result.prefix <= 32
+  //@ ensures !\result.isIPv4 ==> \result.prefix >= 0 && \result.prefix <= 128
   if (type === 'IPv4') {
     return {
       isIPv4: true,
