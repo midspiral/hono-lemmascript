@@ -13,6 +13,7 @@ import {
   convertIPv6ToBinary,
   distinctRemoteAddr,
   isIPv4MappedIPv6,
+  resolveIPv4Addr,
 } from '../../utils/ipaddr'
 
 /**
@@ -120,9 +121,7 @@ const buildMatcher = (
     )(remote.addr))
     const remoteIPv4Addr =
       remote.isIPv4 || isIPv4MappedIPv6(remoteAddr)
-        ? remote.isIPv4
-          ? remoteAddr
-          : convertIPv4MappedIPv6ToIPv4(remoteAddr)
+        ? resolveIPv4Addr(remoteAddr, remote.isIPv4)
         : undefined
     for (const [isIPv4, addr, mask] of cidrRules) {
       if (isIPv4) {

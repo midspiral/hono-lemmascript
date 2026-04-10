@@ -93,8 +93,8 @@ export const convertIPv4BinaryToString = (ipV4: bigint): string => {
   return sections.join('.')
 }
 
-import { isIPv4MappedIPv6, convertIPv4MappedIPv6ToIPv4 } from './ipaddr.verified'
-export { isIPv4MappedIPv6, convertIPv4MappedIPv6ToIPv4 }
+import { isIPv4MappedIPv6, convertIPv4MappedIPv6ToIPv4, resolveIPv4Addr } from './ipaddr.verified'
+export { isIPv4MappedIPv6, convertIPv4MappedIPv6ToIPv4, resolveIPv4Addr }
 
 /**
  * Convert a binary representation of an IPv6 address to a string.

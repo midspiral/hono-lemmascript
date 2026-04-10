@@ -26,6 +26,28 @@ lemma convertIPv4MappedIPv6ToIPv4_ensures(ipv6binary: int)
 {
 }
 
+function resolveIPv4Addr(remoteAddr: int, isIPv4: bool): int
+  requires (remoteAddr >= 0)
+  requires (isIPv4 ==> (remoteAddr <= 4294967295))
+  requires (!(isIPv4) ==> isIPv4MappedIPv6(remoteAddr))
+{
+  if isIPv4 then
+    remoteAddr
+  else
+    convertIPv4MappedIPv6ToIPv4(remoteAddr)
+}
+
+lemma resolveIPv4Addr_ensures(remoteAddr: int, isIPv4: bool)
+  requires (remoteAddr >= 0)
+  requires (isIPv4 ==> (remoteAddr <= 4294967295))
+  requires (!(isIPv4) ==> isIPv4MappedIPv6(remoteAddr))
+  ensures (isIPv4 ==> (resolveIPv4Addr(remoteAddr, isIPv4) == remoteAddr))
+  ensures (!(isIPv4) ==> (resolveIPv4Addr(remoteAddr, isIPv4) == convertIPv4MappedIPv6ToIPv4(remoteAddr)))
+  ensures (resolveIPv4Addr(remoteAddr, isIPv4) >= 0)
+  ensures (resolveIPv4Addr(remoteAddr, isIPv4) <= 4294967295)
+{
+}
+
 function mappedIsDetected(ipv4Addr: int): bool
   requires (ipv4Addr >= 0)
   requires (ipv4Addr <= 4294967295)
@@ -51,6 +73,20 @@ lemma mappedRoundTrip_ensures(ipv4Addr: int)
   requires (ipv4Addr >= 0)
   requires (ipv4Addr <= 4294967295)
   ensures (mappedRoundTrip(ipv4Addr) == ipv4Addr)
+{
+}
+
+function cveMappedEquivalence(ipv4Addr: int): bool
+  requires (ipv4Addr >= 0)
+  requires (ipv4Addr <= 4294967295)
+{
+  (resolveIPv4Addr(ipv4Addr, true) == resolveIPv4Addr((MAPPED_PREFIX + ipv4Addr), false))
+}
+
+lemma cveMappedEquivalence_ensures(ipv4Addr: int)
+  requires (ipv4Addr >= 0)
+  requires (ipv4Addr <= 4294967295)
+  ensures (cveMappedEquivalence(ipv4Addr) == true)
 {
 }
 
