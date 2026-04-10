@@ -1,2 +1,3 @@
 src/middleware/ip-restriction/verified.ts
+src/middleware/ip-restriction/matcher.verified.ts
 src/utils/ipaddr.verified.ts
