@@ -24,6 +24,10 @@ Issues encountered while adding LemmaScript verification to hono's ip-restrictio
    `{ isIPv4: true, prefix }` (where `prefix` is shorthand for `prefix: prefix`) generates `NormalizedMappedCIDRMeta(true)` in Dafny — missing the second argument. Must use `{ isIPv4: true, prefix: prefix }` explicitly.
    *Fix:* Expand property shorthand during extraction.
 
+6. ~~**`bigint` type and literals not supported.**~~ **FIXED** — `bigint` maps to `int`, literals strip the `n` suffix.
+
+7. ~~**Bitwise operators not supported.**~~ **FIXED (Dafny only)** — `>>`, `<<` translate to division/multiplication by powers of 2. `&` translates to `%` when mask+1 is a power of 2.
+
 ## Workarounds applied
 
 - Extracted verified functions to `src/middleware/ip-restriction/verified.ts` to isolate them from unverifiable types.

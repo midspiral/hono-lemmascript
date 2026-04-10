@@ -20,15 +20,22 @@ Verified properties:
 - Returns exactly 2 elements
 - First element is the original rule, second is the `::ffff:` mapped form
 
+### `isIPv4MappedIPv6` (`src/utils/ipaddr.verified.ts`)
+
+Checks if a binary IPv6 address is IPv4-mapped (`::ffff:x.x.x.x`). Uses `bigint` with `>>`.
+
+Verified properties:
+- Equivalence: result matches `ipv6binary / 2^32 === 0xffff`
+
+### `convertIPv4MappedIPv6ToIPv4` (`src/utils/ipaddr.verified.ts`)
+
+Extracts the IPv4 portion (lower 32 bits) from an IPv4-mapped IPv6 address. Uses `bigint` with `&`.
+
+Verified properties:
+- Equivalence: result matches `ipv6binary % 2^32`
+- **32-bit bounds**: result is in `[0, 4294967295]`
+
 ## Candidates
-
-### `ipaddr.ts` utilities (`src/utils/ipaddr.ts`)
-
-Pure functions doing binary arithmetic on IP addresses. Foundation of the CVE fix.
-
-- `isIPv4MappedIPv6(addr: bigint): boolean` — verify it checks exactly the `::ffff:0:0/96` prefix
-- `convertIPv4MappedIPv6ToIPv4(addr: bigint): bigint` — verify result is in 32-bit range, and round-trips with the reverse conversion
-- `convertIPv4ToBinary` / `convertIPv6ToBinary` — verify output bit-width invariants
 
 ### CIDR mask computation
 
