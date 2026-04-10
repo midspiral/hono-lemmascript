@@ -20,9 +20,7 @@ Issues encountered while adding LemmaScript verification to hono's ip-restrictio
    `` `::ffff:${rule}` `` throws `Unsupported expression` at extract time. Must use `'::ffff:' + rule` instead.
    *Fix:* Desugar template literals to string concatenation during extraction.
 
-5. **Property shorthand in object literals drops the field.**
-   `{ isIPv4: true, prefix }` (where `prefix` is shorthand for `prefix: prefix`) generates `NormalizedMappedCIDRMeta(true)` in Dafny — missing the second argument. Must use `{ isIPv4: true, prefix: prefix }` explicitly.
-   *Fix:* Expand property shorthand during extraction.
+5. ~~**Property shorthand in object literals drops the field.**~~ **FIXED** — `{ prefix }` now expands to `{ prefix: prefix }` during extraction.
 
 6. ~~**`bigint` type and literals not supported.**~~ **FIXED** — `bigint` maps to `int`, literals strip the `n` suffix.
 
@@ -36,4 +34,4 @@ Issues encountered while adding LemmaScript verification to hono's ip-restrictio
 - Inlined `type AddressType = 'IPv4' | 'IPv6'` instead of importing.
 - Converted arrow functions to `function` declarations.
 - Replaced template literal with string concatenation.
-- Replaced property shorthand `prefix` with explicit `prefix: prefix`.
+- ~~Replaced property shorthand `prefix` with explicit `prefix: prefix`.~~ No longer needed.

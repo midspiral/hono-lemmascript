@@ -24,7 +24,7 @@ export function normalizeMappedCIDRMeta(
   if (type === 'IPv4') {
     return {
       isIPv4: true,
-      prefix: prefix,
+      prefix,
     }
   }
 
@@ -37,7 +37,7 @@ export function normalizeMappedCIDRMeta(
 
   return {
     isIPv4: false,
-    prefix: prefix,
+    prefix,
   }
 }
 
