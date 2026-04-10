@@ -36,6 +36,52 @@ type IPRestrictionRuleFunction = (addr: { addr: string; type: AddressType }) => 
 export type IPRestrictionRule = string | ((addr: { addr: string; type: AddressType }) => boolean)
 
 const IS_CIDR_NOTATION_REGEX = /\/[0-9]{0,3}$/
+
+
+type NormalizedMappedCIDRMeta = {
+  isIPv4: boolean
+  prefix: number
+}
+
+const normalizeMappedCIDRMeta = (
+  type: AddressType,
+  prefix: number,
+  isMappedIPv6: boolean
+): NormalizedMappedCIDRMeta => {
+  //@ verify
+  //@ ensures type === 'IPv4' ==> \result.isIPv4 === true
+  //@ ensures type === 'IPv4' ==> \result.prefix === prefix
+  //@ ensures type === 'IPv6' && !(isMappedIPv6 && prefix >= 96) ==> \result.isIPv4 === false
+  //@ ensures type === 'IPv6' && !(isMappedIPv6 && prefix >= 96) ==> \result.prefix === prefix
+  //@ ensures type === 'IPv6' && isMappedIPv6 && prefix >= 96 ==> \result.isIPv4 === true
+  //@ ensures type === 'IPv6' && isMappedIPv6 && prefix >= 96 ==> \result.prefix === prefix - 96
+  if (type === 'IPv4') {
+    return {
+      isIPv4: true,
+      prefix,
+    }
+  }
+
+  if (isMappedIPv6 && prefix >= 96) {
+    return {
+      isIPv4: true,
+      prefix: prefix - 96,
+    }
+  }
+
+  return {
+    isIPv4: false,
+    prefix,
+  }
+}
+
+const ipv4StaticRuleAliases = (rule: string): string[] => {
+  //@ verify
+  //@ ensures \result.length === 2
+  //@ ensures \result[0] === rule
+  //@ ensures \result[1] === '::ffff:' + rule
+  return [rule, `::ffff:${rule}`]
+}
 const buildMatcher = (
   rules: IPRestrictionRule[]
 ): ((addr: { addr: string; type: AddressType; isIPv4: boolean }) => boolean) => {
@@ -58,18 +104,24 @@ const buildMatcher = (
           throw new TypeError(`Invalid rule: ${rule}`)
         }
 
-        let isIPv4 = type === 'IPv4'
-        let prefix = parseInt(separatedRule[1])
+        const originalPrefix = parseInt(separatedRule[1])
+        const isCanonicalIPv4 = type === 'IPv4'
+        let prefix = originalPrefix
 
-        if (isIPv4 ? prefix === 32 : prefix === 128) {
+        if (isCanonicalIPv4 ? prefix === 32 : prefix === 128) {
           // this rule is a static rule
           rule = addrStr
         } else {
-          let addr = (isIPv4 ? convertIPv4ToBinary : convertIPv6ToBinary)(addrStr)
-          if (type === 'IPv6' && isIPv4MappedIPv6(addr) && prefix >= 96) {
-            isIPv4 = true
+          let addr = (isCanonicalIPv4 ? convertIPv4ToBinary : convertIPv6ToBinary)(addrStr)
+          const cidrMeta = normalizeMappedCIDRMeta(
+            type,
+            originalPrefix,
+            type === 'IPv6' && isIPv4MappedIPv6(addr)
+          )
+          const isIPv4 = cidrMeta.isIPv4
+          prefix = cidrMeta.prefix
+          if (!isCanonicalIPv4 && isIPv4) {
             addr = convertIPv4MappedIPv6ToIPv4(addr)
-            prefix -= 96
           }
 
           const mask = ((1n << BigInt(prefix)) - 1n) << BigInt((isIPv4 ? 32 : 128) - prefix)
@@ -84,8 +136,9 @@ const buildMatcher = (
         throw new TypeError(`Invalid rule: ${rule}`)
       }
       if (type === 'IPv4') {
-        staticRules.add(rule)
-        staticRules.add(`::ffff:${rule}`)
+        for (const alias of ipv4StaticRuleAliases(rule)) {
+          staticRules.add(alias)
+        }
       } else {
         const ipv6binary = convertIPv6ToBinary(rule)
         const ipv6Addr = convertIPv6BinaryToString(ipv6binary)
