@@ -26,6 +26,8 @@ Issues encountered while adding LemmaScript verification to hono's ip-restrictio
 
 8. ~~**Module-level `const` not extracted.**~~ **FIXED (Dafny only)** — `const` declarations are extracted and emitted as Dafny `const`. Literal types (e.g., TS inferring `281470681743360` instead of `number`) are widened to their base type.
 
+9. ~~**Mutable collection parameters not shadowed.**~~ **FIXED** — `findReassignedNames` now detects mutating collection calls (`.add()`, `.set()`, `.delete()`, `.push()`) on parameters and shadows them as mutable locals.
+
 ## Workarounds applied
 
 - Extracted verified functions to `src/middleware/ip-restriction/verified.ts` to isolate them from unverifiable types.

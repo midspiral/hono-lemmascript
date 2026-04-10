@@ -49,7 +49,18 @@ Verified properties:
 - **`mappedRoundTrip`**: embed-then-extract is the identity
 - **`cveMappedEquivalence`**: `resolveIPv4Addr` gives the same result for direct IPv4 and its `::ffff:` mapped form
 
-These prove the fix's building blocks are correct. The remaining gap is the matcher loop and static rule set around `resolveIPv4Addr`.
+### `addIPv4StaticRule` (`src/middleware/ip-restriction/verified.ts`)
+
+Adds both alias forms to a static rule set. Proves both are members.
+
+Verified properties:
+- `rule in result` and `'::ffff:' + rule in result`
+
+Together, the static and CIDR paths are covered:
+- **Static rules:** both forms are in the set (`addIPv4StaticRule`)
+- **CIDR rules:** `resolveIPv4Addr` returns the same value for both forms (`cveMappedEquivalence`)
+
+The remaining unverified part is the loop and control flow in `buildMatcher`.
 
 ## Candidates
 

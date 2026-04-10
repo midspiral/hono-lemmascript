@@ -1,6 +1,6 @@
 # Hono IP Restriction — Verified with LemmaScript
 
-This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of the IP restriction middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). All verified functions are wired into the production code (18 Dafny lemmas, 0 errors). [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
+This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of the IP restriction middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). All verified functions are wired into the production code (23 Dafny lemmas, 0 errors). [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
 
 The IP restriction middleware recently had a fix for [CVE-2026-39409](https://github.com/honojs/hono/security/advisories/GHSA-3mpf-rcc7-5347) (incorrect IP matching for IPv4-mapped IPv6 addresses). An attacker could send a request from `::ffff:192.168.1.1` (an IPv4-mapped IPv6 address) and bypass an IPv4 restriction rule for `192.168.1.1`. The fix added detection and extraction of the IPv4 address from the mapped form. We formally verify the key property the fix depends on:
 
@@ -44,6 +44,12 @@ Generates both forms of an IPv4 static rule for the deny/allow set.
 
 - Returns exactly 2 elements: the original rule and its `::ffff:` mapped form
 
+### `addIPv4StaticRule` (`src/middleware/ip-restriction/verified.ts`)
+
+Adds both alias forms to a static rule set. Proves both are members after insertion.
+
+- `rule in result` and `'::ffff:' + rule in result` — both the direct and mapped forms are in the set
+
 ### `isIPv4MappedIPv6` (`src/utils/ipaddr.verified.ts`)
 
 Checks if a binary IPv6 address is IPv4-mapped (`::ffff:x.x.x.x`). Uses `bigint` with `>>`.
@@ -71,7 +77,13 @@ Three properties that together prove the CVE fix's building blocks are correct:
 - **`mappedRoundTrip`**: `convertIPv4MappedIPv6ToIPv4(0xffff00000000 + ipv4Addr) === ipv4Addr` — embedding and extracting is the identity
 - **`cveMappedEquivalence`**: `resolveIPv4Addr(ipv4Addr, true) === resolveIPv4Addr(0xffff00000000 + ipv4Addr, false)` — resolving an IPv4 address directly gives the same result as resolving its `::ffff:` mapped form
 
-The pre-fix code didn't resolve mapped addresses at all — it treated `::ffff:192.168.1.1` as a plain IPv6 address, so IPv4 restriction rules didn't match it. These properties prove the fix's resolution logic is correct. The remaining gap is the matcher loop and static rule set around `resolveIPv4Addr`.
+The pre-fix code didn't resolve mapped addresses at all — it treated `::ffff:192.168.1.1` as a plain IPv6 address, so IPv4 restriction rules didn't match it.
+
+Together with `addIPv4StaticRule`, both matcher paths are covered:
+- **Static rules:** both `rule` and `::ffff:rule` are in the set, so `has()` matches both forms
+- **CIDR rules:** `resolveIPv4Addr` returns the same value for both forms, so the mask comparison gives the same result
+
+The remaining unverified part is the loop and control flow in `buildMatcher` itself.
 
 ## File Structure
 
@@ -79,7 +91,7 @@ The pre-fix code didn't resolve mapped addresses at all — it treated `::ffff:1
 src/middleware/ip-restriction/
   index.ts                  ← Production middleware, imports from verified.ts
   verified.ts               ← Annotated TypeScript (normalizeMappedCIDRMeta, ipv4StaticRuleAliases)
-  verified.dfy              ← Dafny verification target (4 verified, 0 errors)
+  verified.dfy              ← Dafny verification target (5 verified, 0 errors)
   verified.dfy.gen          ← Generated Dafny (regeneratable)
 
 src/utils/
@@ -129,7 +141,12 @@ This case study drove several improvements to LemmaScript (Dafny backend):
 - **Bitwise operators:** `>>` and `<<` translate to division/multiplication by powers of 2; `&` with power-of-2 masks translates to `%`
 - **Module-level `const`:** extracted and emitted as Dafny `const`; literal types widened to base type
 
-See `LS_TODO.md` for remaining issues (arrow functions, template literals, property shorthand, cross-file imports).
+- **Hex literals in annotations:** `0xffffn` works in `//@ ensures` (spec parser supports hex and `n` suffix)
+- **Template literals:** `` `::ffff:${rule}` `` desugared to string concatenation
+- **Property shorthand:** `{ prefix }` expanded to `{ prefix: prefix }`
+- **Mutable collection parameters:** `s.add(x)` on a parameter now correctly shadows it as mutable
+
+See `LS_TODO.md` for remaining issues (arrow functions, cross-file imports, unreachable type extraction).
 
 ## Roadmap
 
