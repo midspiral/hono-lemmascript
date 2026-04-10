@@ -56,17 +56,21 @@ Adds both alias forms to a static rule set. Proves both are members.
 Verified properties:
 - `rule in result` and `'::ffff:' + rule in result`
 
-Together, the static and CIDR paths are covered:
+### `cidrMask` (`src/utils/ipaddr.verified.ts`)
+
+The `((1n << prefix) - 1n) << (bits - prefix)` expression. Proved non-negative with a manual `Pow2Positive` lemma.
+
+### `matchSingleCIDR` (`src/middleware/ip-restriction/matcher.verified.ts`)
+
+The matcher's per-rule CIDR check — handles `undefined` guard, `BitAnd` with variable masks, address family dispatch.
+
+### `matcherCIDREquivalence` (`src/middleware/ip-restriction/matcher.verified.ts`)
+
+For any IPv4 CIDR rule, `matchSingleCIDR` gives the same result for a direct IPv4 address and its `::ffff:` mapped form.
+
+### Coverage summary
+
 - **Static rules:** both forms are in the set (`addIPv4StaticRule`)
-- **CIDR rules:** `resolveIPv4Addr` returns the same value for both forms (`cveMappedEquivalence`)
+- **CIDR rules:** matcher gives the same result for both forms (`matcherCIDREquivalence`)
 
-The remaining unverified part is the loop and control flow in `buildMatcher`.
-
-## Candidates
-
-### CIDR mask computation
-
-The expression `((1n << BigInt(prefix)) - 1n) << BigInt((isIPv4 ? 32 : 128) - prefix)` computes a bitmask with exactly `prefix` leading 1-bits. Could extract as a pure function and verify:
-- Mask has exactly `prefix` set bits
-- Mask bits are contiguous and left-aligned
-- `addr & mask` preserves only the network portion
+The remaining unverified part is the for loop and closure in `buildMatcher` — control flow, not data logic.

@@ -28,6 +28,10 @@ Issues encountered while adding LemmaScript verification to hono's ip-restrictio
 
 9. ~~**Mutable collection parameters not shadowed.**~~ **FIXED** — `findReassignedNames` now detects mutating collection calls (`.add()`, `.set()`, `.delete()`, `.push()`) on parameters and shadows them as mutable locals.
 
+10. ~~**Optional narrowing broken in multiple ways.**~~ **FIXED** — Ternary with `undefined` branch now wraps in `Some`/`None`. `=== undefined` emits proper `None?` check. Early-return pattern (`if (x === undefined) return; use(x)`) unwraps correctly. Optional narrowing works in pure functions. Non-optional args coerced to `Some` when callee expects `Option<T>`.
+
+11. ~~**Variable `<<`/`>>` not supported.**~~ **FIXED (Dafny only)** — Emits `Pow2(n)` helper for variable shifts. `BigInt()` calls emit identity.
+
 ## Workarounds applied
 
 - Extracted verified functions to `src/middleware/ip-restriction/verified.ts` to isolate them from unverifiable types.

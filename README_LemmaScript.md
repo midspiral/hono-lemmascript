@@ -1,12 +1,12 @@
 # Hono IP Restriction — Verified with LemmaScript
 
-This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of the IP restriction middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). All verified functions are wired into the production code (28 Dafny lemmas, 0 errors). [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
+This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of the IP restriction middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). 49 Dafny lemmas, 0 errors. Verified functions are wired into the production code. [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
 
 The IP restriction middleware recently had a fix for [CVE-2026-39409](https://github.com/honojs/hono/security/advisories/GHSA-3mpf-rcc7-5347) (incorrect IP matching for IPv4-mapped IPv6 addresses). An attacker could send a request from `::ffff:192.168.1.1` (an IPv4-mapped IPv6 address) and bypass an IPv4 restriction rule for `192.168.1.1`. The fix added detection and extraction of the IPv4 address from the mapped form. We formally verify the key property the fix depends on:
 
-> **For all 2^32 IPv4 addresses, embedding as `::ffff:x.x.x.x` and extracting gives back the original.**
+> **For any IPv4 CIDR rule, matching a direct IPv4 address through the matcher gives the same result as matching its `::ffff:` mapped form.**
 
-This is the `mappedRoundTrip` lemma — proved automatically by Dafny, not tested with examples. If this property breaks, the restriction bypass returns.
+This is the `matcherCIDREquivalence` lemma — proved automatically by Dafny over the actual matcher logic (`matchSingleCIDR`), including the `undefined` guard, bitwise mask comparison, and address family dispatch. Combined with `addIPv4StaticRule` (which proves both alias forms are in the static rule set), both data paths through the matcher are covered.
 
 ## Setup
 
@@ -79,26 +79,38 @@ Three properties that together prove the CVE fix's building blocks are correct:
 
 The pre-fix code didn't resolve mapped addresses at all — it treated `::ffff:192.168.1.1` as a plain IPv6 address, so IPv4 restriction rules didn't match it.
 
-Together with `addIPv4StaticRule`, both matcher paths are covered:
-- **Static rules:** both `rule` and `::ffff:rule` are in the set, so `has()` matches both forms
-- **CIDR rules:** `resolveIPv4Addr` returns the same value for both forms, so the mask comparison gives the same result
+### Matcher CIDR check (`src/middleware/ip-restriction/matcher.verified.ts`)
 
-The remaining unverified part is the loop and control flow in `buildMatcher` itself.
+`matchSingleCIDR` — the matcher's per-rule CIDR check, extracted from `buildMatcher` lines 127-142. Handles the `undefined` guard, bitwise mask comparison (`BitAnd`), and address family dispatch.
+
+`matcherCIDREquivalence` — proves that for any IPv4 CIDR rule, `matchSingleCIDR` gives the same result for a direct IPv4 address and its `::ffff:` mapped form.
+
+### CIDR mask computation (`src/utils/ipaddr.verified.ts`)
+
+`cidrMask` — the `((1n << prefix) - 1n) << (bits - prefix)` expression. Proved non-negative (required a manual `Pow2Positive` helper lemma — the only non-automatic proof in the case study).
+
+### Coverage summary
+
+Both data paths through the matcher are verified for IPv4/mapped-IPv6 equivalence:
+- **Static rules:** `addIPv4StaticRule` proves both `rule` and `::ffff:rule` are in the set
+- **CIDR rules:** `matcherCIDREquivalence` proves `matchSingleCIDR` gives the same result for both forms
+
+The remaining unverified part is the for loop and closure in `buildMatcher` itself — control flow, not data logic.
 
 ## File Structure
 
 ```
 src/middleware/ip-restriction/
-  index.ts                  ← Production middleware, imports from verified.ts
-  verified.ts               ← Annotated TypeScript (normalizeMappedCIDRMeta, ipv4StaticRuleAliases)
-  verified.dfy              ← Dafny verification target (5 verified, 0 errors)
-  verified.dfy.gen          ← Generated Dafny (regeneratable)
+  index.ts                    ← Production middleware, imports from verified.ts
+  verified.ts                 ← Rule building (normalizeMappedCIDRMeta, ipv4StaticRuleAliases, addIPv4StaticRule)
+  verified.dfy                ← Dafny verification (5 verified, 0 errors)
+  matcher.verified.ts         ← Matcher CIDR check (matchSingleCIDR, matcherCIDREquivalence)
+  matcher.verified.dfy        ← Dafny verification (15 verified, 0 errors)
 
 src/utils/
-  ipaddr.ts                 ← Production IP utilities, imports from ipaddr.verified.ts
-  ipaddr.verified.ts        ← Annotated TypeScript (functions + equivalence properties)
-  ipaddr.verified.dfy       ← Dafny verification target (23 verified, 0 errors)
-  ipaddr.verified.dfy.gen   ← Generated Dafny (regeneratable)
+  ipaddr.ts                   ← Production IP utilities, imports from ipaddr.verified.ts
+  ipaddr.verified.ts          ← IP functions + equivalence properties + cidrMask
+  ipaddr.verified.dfy         ← Dafny verification (29 verified, 0 errors)
 ```
 
 ## How It Works
@@ -145,11 +157,18 @@ This case study drove several improvements to LemmaScript (Dafny backend):
 - **Template literals:** `` `::ffff:${rule}` `` desugared to string concatenation
 - **Property shorthand:** `{ prefix }` expanded to `{ prefix: prefix }`
 - **Mutable collection parameters:** `s.add(x)` on a parameter now correctly shadows it as mutable
+- **`BitAnd` and `Pow2` helpers:** `x & y` with variable masks emits `BitAnd(x, y)` (recursive binary decomposition); `x << n` with variable shift emits `x * Pow2(n)`
+- **`BigInt()` identity:** `BigInt(x)` emits `x` (both map to `int`)
+- **Optional narrowing fixes:** ternary `Some`/`None` wrapping, `=== undefined` codegen, early-return narrowing, pure function narrowing, `T` to `Option<T>` parameter coercion
 
 See `LS_TODO.md` for remaining issues (arrow functions, cross-file imports, unreachable type extraction).
 
 ## Roadmap
 
-### CIDR mask computation
+### Verify `buildMatcher`'s for loop
 
-Extract the mask expression `((1n << BigInt(prefix)) - 1n) << BigInt((isIPv4 ? 32 : 128) - prefix)` and verify it produces a contiguous bitmask with exactly `prefix` leading 1-bits.
+The CIDR loop iterates over rules and returns true on first match. Verifying the loop would close the gap between `matchSingleCIDR` (verified per-rule) and the full matcher. Blocked on LemmaScript's `return inside a loop` limitation.
+
+### Wire `matchSingleCIDR` into production code
+
+Currently a self-contained verification file. Could be wired into `buildMatcher` by extracting the loop body, similar to how `resolveIPv4Addr` was extracted and wired in.
