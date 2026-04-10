@@ -1,6 +1,6 @@
 # Hono IP Restriction — Verified with LemmaScript
 
-This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of the IP restriction middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). All verified functions are wired into the production code (16 Dafny lemmas, 0 errors).
+This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of the IP restriction middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). All verified functions are wired into the production code (16 Dafny lemmas, 0 errors). [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
 
 The IP restriction middleware recently had a fix for [CVE-2026-39409](https://github.com/honojs/hono/security/advisories/GHSA-3mpf-rcc7-5347) (incorrect IP matching for IPv4-mapped IPv6 addresses). An attacker could send a request from `::ffff:192.168.1.1` (an IPv4-mapped IPv6 address) and bypass an IPv4 restriction rule for `192.168.1.1`. The fix added detection and extraction of the IPv4 address from the mapped form. We formally verify the key property the fix depends on:
 
