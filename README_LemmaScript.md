@@ -53,6 +53,20 @@ Extracts the IPv4 portion (lower 32 bits) from an IPv4-mapped IPv6 address. Uses
 - Equivalence: result matches `ipv6binary % 2^32`
 - **32-bit bounds:** result in `[0, 2^32 - 1]`
 
+### `mappedIsDetected` (`src/utils/ipaddr.verified.ts`)
+
+Equivalence property: any IPv4 address embedded as `::ffff:x.x.x.x` is correctly detected as IPv4-mapped.
+
+- `isIPv4MappedIPv6(0xffff00000000 + ipv4Addr) === true` for all 32-bit `ipv4Addr`
+
+### `mappedRoundTrip` (`src/utils/ipaddr.verified.ts`)
+
+**The CVE-relevant equivalence property.** Proves the round-trip that the CVE fix depends on: embedding an IPv4 address as IPv4-mapped IPv6 and extracting gives back the original.
+
+- `convertIPv4MappedIPv6ToIPv4(0xffff00000000 + ipv4Addr) === ipv4Addr` for all 32-bit `ipv4Addr`
+
+The pre-fix code didn't do this round-trip — it treated `::ffff:192.168.1.1` as a plain IPv6 address, so IPv4 restriction rules didn't match it. The fix added detection (`isIPv4MappedIPv6`) + extraction (`convertIPv4MappedIPv6ToIPv4`), and these two lemmas prove that detection and extraction are correct and compose correctly.
+
 ## File Structure
 
 ```
@@ -64,8 +78,8 @@ src/middleware/ip-restriction/
 
 src/utils/
   ipaddr.ts                 ← Production IP utilities, imports from ipaddr.verified.ts
-  ipaddr.verified.ts        ← Annotated TypeScript (isIPv4MappedIPv6, convertIPv4MappedIPv6ToIPv4)
-  ipaddr.verified.dfy       ← Dafny verification target (6 verified, 0 errors)
+  ipaddr.verified.ts        ← Annotated TypeScript (functions + equivalence properties)
+  ipaddr.verified.dfy       ← Dafny verification target (12 verified, 0 errors)
   ipaddr.verified.dfy.gen   ← Generated Dafny (regeneratable)
 ```
 
@@ -103,10 +117,11 @@ The TypeScript is the source of truth. The `.dfy.gen` file is always regeneratab
 
 ## LemmaScript Improvements
 
-This case study drove several improvements to LemmaScript:
+This case study drove several improvements to LemmaScript (Dafny backend):
 
-- **`bigint` support:** `bigint` type maps to Dafny `int`, literals like `32n` strip the `n` suffix
-- **Bitwise operators (Dafny):** `>>` and `<<` translate to division/multiplication by powers of 2; `&` with power-of-2 masks translates to `%`
+- **`bigint` support:** `bigint` type maps to `int`, literals like `32n` strip the `n` suffix
+- **Bitwise operators:** `>>` and `<<` translate to division/multiplication by powers of 2; `&` with power-of-2 masks translates to `%`
+- **Module-level `const`:** extracted and emitted as Dafny `const`; literal types widened to base type
 
 See `LS_TODO.md` for remaining issues (arrow functions, template literals, property shorthand, cross-file imports).
 
@@ -115,7 +130,3 @@ See `LS_TODO.md` for remaining issues (arrow functions, template literals, prope
 ### CIDR mask computation
 
 Extract the mask expression `((1n << BigInt(prefix)) - 1n) << BigInt((isIPv4 ? 32 : 128) - prefix)` and verify it produces a contiguous bitmask with exactly `prefix` leading 1-bits.
-
-### IPv4/IPv6 equivalence property
-
-The security invariant that would have caught the CVE: **an IPv4 address and its `::ffff:` mapped form produce the same match result.** This requires extracting more of `buildMatcher`'s logic into pure, verifiable functions. It is the end goal of this verification effort.

@@ -28,6 +28,8 @@ Issues encountered while adding LemmaScript verification to hono's ip-restrictio
 
 7. ~~**Bitwise operators not supported.**~~ **FIXED (Dafny only)** — `>>`, `<<` translate to division/multiplication by powers of 2. `&` translates to `%` when mask+1 is a power of 2.
 
+8. ~~**Module-level `const` not extracted.**~~ **FIXED (Dafny only)** — `const` declarations are extracted and emitted as Dafny `const`. Literal types (e.g., TS inferring `281470681743360` instead of `number`) are widened to their base type.
+
 ## Workarounds applied
 
 - Extracted verified functions to `src/middleware/ip-restriction/verified.ts` to isolate them from unverifiable types.

@@ -35,6 +35,20 @@ Verified properties:
 - Equivalence: result matches `ipv6binary % 2^32`
 - **32-bit bounds**: result is in `[0, 4294967295]`
 
+### `mappedIsDetected` (`src/utils/ipaddr.verified.ts`)
+
+Equivalence property: any IPv4 address embedded as `::ffff:x.x.x.x` is correctly detected as IPv4-mapped.
+
+Verified properties:
+- `isIPv4MappedIPv6(0xffff00000000 + ipv4Addr) === true` for all 32-bit `ipv4Addr`
+
+### `mappedRoundTrip` (`src/utils/ipaddr.verified.ts`)
+
+**The CVE-relevant equivalence property.** Proves that embedding an IPv4 address as IPv4-mapped IPv6 and extracting gives back the original — the invariant the CVE attacker violated.
+
+Verified properties:
+- `convertIPv4MappedIPv6ToIPv4(0xffff00000000 + ipv4Addr) === ipv4Addr` for all 32-bit `ipv4Addr`
+
 ## Candidates
 
 ### CIDR mask computation
@@ -43,7 +57,3 @@ The expression `((1n << BigInt(prefix)) - 1n) << BigInt((isIPv4 ? 32 : 128) - pr
 - Mask has exactly `prefix` set bits
 - Mask bits are contiguous and left-aligned
 - `addr & mask` preserves only the network portion
-
-### IPv4/IPv6 equivalence property
-
-The security invariant that would have caught the CVE: "an IPv4 address and its `::ffff:` mapped form produce the same match result." This is a property on the matcher itself, not a helper — harder to verify, may require extracting the matching logic into a pure function.

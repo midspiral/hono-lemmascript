@@ -25,3 +25,33 @@ lemma convertIPv4MappedIPv6ToIPv4_ensures(ipv6binary: int)
   ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) <= 4294967295)
 {
 }
+
+function mappedIsDetected(ipv4Addr: int): bool
+  requires (ipv4Addr >= 0)
+  requires (ipv4Addr <= 4294967295)
+{
+  isIPv4MappedIPv6((MAPPED_PREFIX + ipv4Addr))
+}
+
+lemma mappedIsDetected_ensures(ipv4Addr: int)
+  requires (ipv4Addr >= 0)
+  requires (ipv4Addr <= 4294967295)
+  ensures (mappedIsDetected(ipv4Addr) == true)
+{
+}
+
+function mappedRoundTrip(ipv4Addr: int): int
+  requires (ipv4Addr >= 0)
+  requires (ipv4Addr <= 4294967295)
+{
+  convertIPv4MappedIPv6ToIPv4((MAPPED_PREFIX + ipv4Addr))
+}
+
+lemma mappedRoundTrip_ensures(ipv4Addr: int)
+  requires (ipv4Addr >= 0)
+  requires (ipv4Addr <= 4294967295)
+  ensures (mappedRoundTrip(ipv4Addr) == ipv4Addr)
+{
+}
+
+const MAPPED_PREFIX: int := 281470681743360
