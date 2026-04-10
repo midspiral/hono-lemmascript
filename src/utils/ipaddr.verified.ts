@@ -70,6 +70,21 @@ export function cveMappedEquivalence(ipv4Addr: bigint): boolean {
   return resolveIPv4Addr(ipv4Addr, true) === resolveIPv4Addr(MAPPED_PREFIX + ipv4Addr, false)
 }
 
+// --- CIDR mask computation ---
+
+/**
+ * Compute a CIDR mask with `prefix` leading 1-bits in a `bits`-wide field.
+ * Extracted from buildMatcher line 84:
+ *   ((1n << BigInt(prefix)) - 1n) << BigInt((isIPv4 ? 32 : 128) - prefix)
+ */
+export function cidrMask(prefix: number, bits: number): bigint {
+  //@ verify
+  //@ requires prefix >= 0 && prefix <= bits
+  //@ requires bits >= 0
+  //@ ensures \result >= 0
+  return ((1n << BigInt(prefix)) - 1n) << BigInt(bits - prefix)
+}
+
 // --- CIDR matching ---
 
 /**
