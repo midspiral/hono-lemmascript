@@ -46,5 +46,5 @@ export function ipv4StaticRuleAliases(rule: string): string[] {
   //@ ensures \result.length === 2
   //@ ensures \result[0] === rule
   //@ ensures \result[1] === '::ffff:' + rule
-  return [rule, '::ffff:' + rule]
+  return [rule, `::ffff:${rule}`]
 }

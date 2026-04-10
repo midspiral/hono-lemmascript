@@ -16,9 +16,7 @@ Issues encountered while adding LemmaScript verification to hono's ip-restrictio
    `const f = (...) => { //@ verify ... }` produces no Dafny output and no error. Only `function` declarations are recognized for verification. The spec doesn't document this limitation.
    *Fix:* Either support `//@ verify` on arrow functions assigned to `const`, or emit a warning when `//@ verify` is found inside an arrow function.
 
-4. **Template literals not supported.**
-   `` `::ffff:${rule}` `` throws `Unsupported expression` at extract time. Must use `'::ffff:' + rule` instead.
-   *Fix:* Desugar template literals to string concatenation during extraction.
+4. ~~**Template literals not supported.**~~ **FIXED** — desugared to string concatenation during extraction.
 
 5. ~~**Property shorthand in object literals drops the field.**~~ **FIXED** — `{ prefix }` now expands to `{ prefix: prefix }` during extraction.
 
@@ -33,5 +31,5 @@ Issues encountered while adding LemmaScript verification to hono's ip-restrictio
 - Extracted verified functions to `src/middleware/ip-restriction/verified.ts` to isolate them from unverifiable types.
 - Inlined `type AddressType = 'IPv4' | 'IPv6'` instead of importing.
 - Converted arrow functions to `function` declarations.
-- Replaced template literal with string concatenation.
+- ~~Replaced template literal with string concatenation.~~ No longer needed.
 - ~~Replaced property shorthand `prefix` with explicit `prefix: prefix`.~~ No longer needed.
