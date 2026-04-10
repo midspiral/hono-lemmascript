@@ -60,13 +60,39 @@ export function mappedRoundTrip(ipv4Addr: bigint): bigint {
 }
 
 /**
- * THE CVE PROPERTY: resolving an IPv4 address directly gives the same
- * result as resolving its ::ffff: mapped form. This is what the CVE
- * attacker exploited — the pre-fix code didn't have this equivalence.
+ * Resolving an IPv4 address directly gives the same result as
+ * resolving its ::ffff: mapped form.
  */
 export function cveMappedEquivalence(ipv4Addr: bigint): boolean {
   //@ verify
   //@ requires ipv4Addr >= 0 && ipv4Addr <= 0xffffffffn
   //@ ensures \result === true
   return resolveIPv4Addr(ipv4Addr, true) === resolveIPv4Addr(MAPPED_PREFIX + ipv4Addr, false)
+}
+
+// --- CIDR matching ---
+
+/**
+ * Check if an address matches a CIDR rule (addr & mask === maskedAddr).
+ * Extracted from the CIDR loop in buildMatcher.
+ */
+export function cidrMatch(addr: bigint, mask: bigint, maskedAddr: bigint): boolean {
+  //@ verify
+  //@ requires addr >= 0
+  //@ requires mask >= 0
+  //@ requires maskedAddr >= 0
+  return (addr & mask) === maskedAddr
+}
+
+/**
+ * CIDR match equivalence: matching a direct IPv4 address against a CIDR rule
+ * gives the same result as matching its ::ffff: mapped form, after resolution.
+ */
+export function cveCidrEquivalence(ipv4Addr: bigint, mask: bigint, maskedAddr: bigint): boolean {
+  //@ verify
+  //@ requires ipv4Addr >= 0 && ipv4Addr <= 0xffffffffn
+  //@ requires mask >= 0
+  //@ requires maskedAddr >= 0
+  //@ ensures \result === cidrMatch(resolveIPv4Addr(MAPPED_PREFIX + ipv4Addr, false), mask, maskedAddr)
+  return cidrMatch(resolveIPv4Addr(ipv4Addr, true), mask, maskedAddr)
 }
