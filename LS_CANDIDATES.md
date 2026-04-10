@@ -35,19 +35,21 @@ Verified properties:
 - Equivalence: result matches `ipv6binary % 2^32`
 - **32-bit bounds**: result is in `[0, 4294967295]`
 
-### `mappedIsDetected` (`src/utils/ipaddr.verified.ts`)
+### `resolveIPv4Addr` (`src/utils/ipaddr.verified.ts`)
 
-Equivalence property: any IPv4 address embedded as `::ffff:x.x.x.x` is correctly detected as IPv4-mapped.
-
-Verified properties:
-- `isIPv4MappedIPv6(0xffff00000000 + ipv4Addr) === true` for all 32-bit `ipv4Addr`
-
-### `mappedRoundTrip` (`src/utils/ipaddr.verified.ts`)
-
-**The CVE-relevant equivalence property.** Proves that embedding an IPv4 address as IPv4-mapped IPv6 and extracting gives back the original — the invariant the CVE attacker violated.
+Resolves a remote address to its IPv4 form. Extracted from `buildMatcher` and wired in.
 
 Verified properties:
-- `convertIPv4MappedIPv6ToIPv4(0xffff00000000 + ipv4Addr) === ipv4Addr` for all 32-bit `ipv4Addr`
+- Branch correctness (IPv4 passthrough, mapped extraction)
+- **32-bit bounds** on result
+
+### Equivalence properties (`src/utils/ipaddr.verified.ts`)
+
+- **`mappedIsDetected`**: embedded IPv4 is detected as mapped
+- **`mappedRoundTrip`**: embed-then-extract is the identity
+- **`cveMappedEquivalence`**: `resolveIPv4Addr` gives the same result for direct IPv4 and its `::ffff:` mapped form
+
+These prove the fix's building blocks are correct. The remaining gap is the matcher loop and static rule set around `resolveIPv4Addr`.
 
 ## Candidates
 

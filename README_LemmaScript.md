@@ -1,6 +1,6 @@
 # Hono IP Restriction — Verified with LemmaScript
 
-This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of the IP restriction middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). All verified functions are wired into the production code (16 Dafny lemmas, 0 errors). [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
+This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of the IP restriction middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). All verified functions are wired into the production code (18 Dafny lemmas, 0 errors). [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
 
 The IP restriction middleware recently had a fix for [CVE-2026-39409](https://github.com/honojs/hono/security/advisories/GHSA-3mpf-rcc7-5347) (incorrect IP matching for IPv4-mapped IPv6 addresses). An attacker could send a request from `::ffff:192.168.1.1` (an IPv4-mapped IPv6 address) and bypass an IPv4 restriction rule for `192.168.1.1`. The fix added detection and extraction of the IPv4 address from the mapped form. We formally verify the key property the fix depends on:
 
@@ -57,19 +57,21 @@ Extracts the IPv4 portion (lower 32 bits) from an IPv4-mapped IPv6 address. Uses
 - Equivalence: result matches `ipv6binary % 2^32`
 - **32-bit bounds:** result in `[0, 2^32 - 1]`
 
-### `mappedIsDetected` (`src/utils/ipaddr.verified.ts`)
+### `resolveIPv4Addr` (`src/utils/ipaddr.verified.ts`)
 
-Equivalence property: any IPv4 address embedded as `::ffff:x.x.x.x` is correctly detected as IPv4-mapped.
+Resolves a remote address to its IPv4 form — direct IPv4 passes through, mapped IPv6 extracts the IPv4 portion. Extracted from `buildMatcher` and wired into the production matcher.
 
-- `isIPv4MappedIPv6(0xffff00000000 + ipv4Addr) === true` for all 32-bit `ipv4Addr`
+- **32-bit bounds:** result in `[0, 2^32 - 1]`
 
-### `mappedRoundTrip` (`src/utils/ipaddr.verified.ts`)
+### Equivalence properties (`src/utils/ipaddr.verified.ts`)
 
-**The CVE-relevant equivalence property.** Proves the round-trip that the CVE fix depends on: embedding an IPv4 address as IPv4-mapped IPv6 and extracting gives back the original.
+Three properties that together prove the CVE fix's building blocks are correct:
 
-- `convertIPv4MappedIPv6ToIPv4(0xffff00000000 + ipv4Addr) === ipv4Addr` for all 32-bit `ipv4Addr`
+- **`mappedIsDetected`**: `isIPv4MappedIPv6(0xffff00000000 + ipv4Addr) === true` — any embedded IPv4 address is detected as mapped
+- **`mappedRoundTrip`**: `convertIPv4MappedIPv6ToIPv4(0xffff00000000 + ipv4Addr) === ipv4Addr` — embedding and extracting is the identity
+- **`cveMappedEquivalence`**: `resolveIPv4Addr(ipv4Addr, true) === resolveIPv4Addr(0xffff00000000 + ipv4Addr, false)` — resolving an IPv4 address directly gives the same result as resolving its `::ffff:` mapped form
 
-The pre-fix code didn't do this round-trip — it treated `::ffff:192.168.1.1` as a plain IPv6 address, so IPv4 restriction rules didn't match it. The fix added detection (`isIPv4MappedIPv6`) + extraction (`convertIPv4MappedIPv6ToIPv4`), and these two lemmas prove that detection and extraction are correct and compose correctly.
+The pre-fix code didn't resolve mapped addresses at all — it treated `::ffff:192.168.1.1` as a plain IPv6 address, so IPv4 restriction rules didn't match it. These properties prove the fix's resolution logic is correct. The remaining gap is the matcher loop and static rule set around `resolveIPv4Addr`.
 
 ## File Structure
 
@@ -83,7 +85,7 @@ src/middleware/ip-restriction/
 src/utils/
   ipaddr.ts                 ← Production IP utilities, imports from ipaddr.verified.ts
   ipaddr.verified.ts        ← Annotated TypeScript (functions + equivalence properties)
-  ipaddr.verified.dfy       ← Dafny verification target (12 verified, 0 errors)
+  ipaddr.verified.dfy       ← Dafny verification target (18 verified, 0 errors)
   ipaddr.verified.dfy.gen   ← Generated Dafny (regeneratable)
 ```
 
