@@ -42,3 +42,15 @@ lemma ipv4StaticRuleAliases_ensures(rule: string)
   ensures (ipv4StaticRuleAliases(rule)[1] == ("::ffff:" + rule))
 {
 }
+
+method addIPv4StaticRule(rules: set<string>, rule: string) returns (res: set<string>)
+  ensures (rule in res)
+  ensures (("::ffff:" + rule) in res)
+{
+  var rules := rules;
+  var i_t0 := ipv4StaticRuleAliases(rule);
+  var aliases := i_t0;
+  rules := (rules + {aliases[0]});
+  rules := (rules + {aliases[1]});
+  return rules;
+}

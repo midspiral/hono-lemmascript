@@ -48,3 +48,17 @@ export function ipv4StaticRuleAliases(rule: string): string[] {
   //@ ensures \result[1] === '::ffff:' + rule
   return [rule, `::ffff:${rule}`]
 }
+
+/**
+ * Build the static rule set for an IPv4 rule and prove both the
+ * direct and ::ffff: mapped forms are members.
+ */
+export function addIPv4StaticRule(rules: Set<string>, rule: string): Set<string> {
+  //@ verify
+  //@ ensures \result.has(rule)
+  //@ ensures \result.has('::ffff:' + rule)
+  const aliases = ipv4StaticRuleAliases(rule)
+  rules.add(aliases[0])
+  rules.add(aliases[1])
+  return rules
+}
