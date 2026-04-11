@@ -1,11 +1,11 @@
-export function isIPv4MappedIPv6(ipv6binary: bigint): boolean {
+export const isIPv4MappedIPv6 = (ipv6binary: bigint): boolean => {
   //@ verify
   //@ requires ipv6binary >= 0
   //@ ensures \result === (ipv6binary / 0x100000000n === 0xffffn)
   return ipv6binary >> 32n === 0xffffn
 }
 
-export function convertIPv4MappedIPv6ToIPv4(ipv6binary: bigint): bigint {
+export const convertIPv4MappedIPv6ToIPv4 = (ipv6binary: bigint): bigint => {
   //@ verify
   //@ requires ipv6binary >= 0
   //@ ensures \result === ipv6binary % 0x100000000n

@@ -15,32 +15,6 @@ function BitAnd(x: int, y: int): int
   else 2 * BitAnd(x / 2, y / 2) + (if x % 2 == 1 && y % 2 == 1 then 1 else 0)
 }
 
-function isIPv4MappedIPv6(ipv6binary: int): bool
-  requires (ipv6binary >= 0)
-{
-  ((ipv6binary / 4294967296) == 65535)
-}
-
-lemma isIPv4MappedIPv6_ensures(ipv6binary: int)
-  requires (ipv6binary >= 0)
-  ensures (isIPv4MappedIPv6(ipv6binary) == ((ipv6binary / 4294967296) == 65535))
-{
-}
-
-function convertIPv4MappedIPv6ToIPv4(ipv6binary: int): int
-  requires (ipv6binary >= 0)
-{
-  (ipv6binary % 4294967296)
-}
-
-lemma convertIPv4MappedIPv6ToIPv4_ensures(ipv6binary: int)
-  requires (ipv6binary >= 0)
-  ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) == (ipv6binary % 4294967296))
-  ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) >= 0)
-  ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) <= 4294967295)
-{
-}
-
 function resolveIPv4Addr(remoteAddr: int, isIPv4: bool): int
   requires (remoteAddr >= 0)
   requires (isIPv4 ==> (remoteAddr <= 4294967295))
@@ -154,6 +128,32 @@ lemma cveCidrEquivalence_ensures(ipv4Addr: int, mask: int, maskedAddr: int)
   requires (mask >= 0)
   requires (maskedAddr >= 0)
   ensures (cveCidrEquivalence(ipv4Addr, mask, maskedAddr) == cidrMatch(resolveIPv4Addr((MAPPED_PREFIX + ipv4Addr), false), mask, maskedAddr))
+{
+}
+
+function isIPv4MappedIPv6(ipv6binary: int): bool
+  requires (ipv6binary >= 0)
+{
+  ((ipv6binary / 4294967296) == 65535)
+}
+
+lemma isIPv4MappedIPv6_ensures(ipv6binary: int)
+  requires (ipv6binary >= 0)
+  ensures (isIPv4MappedIPv6(ipv6binary) == ((ipv6binary / 4294967296) == 65535))
+{
+}
+
+function convertIPv4MappedIPv6ToIPv4(ipv6binary: int): int
+  requires (ipv6binary >= 0)
+{
+  (ipv6binary % 4294967296)
+}
+
+lemma convertIPv4MappedIPv6ToIPv4_ensures(ipv6binary: int)
+  requires (ipv6binary >= 0)
+  ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) == (ipv6binary % 4294967296))
+  ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) >= 0)
+  ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) <= 4294967295)
 {
 }
 
