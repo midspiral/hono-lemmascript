@@ -9,6 +9,8 @@ datatype CookiePrefixOptions = host | secure
 method trimCookieWhitespace(value: string) returns (res: string)
   ensures (|res| <= |value|)
   ensures exists start: int, end: int :: ((((((start >= 0) && (start <= end)) && (end <= |value|)) && (res == value[start..end])) && forall i: int :: ((i >= 0) ==> (i < start) ==> (((value[i] as int) == 32) || ((value[i] as int) == 9)))) && forall i: int :: ((i >= end) ==> (i < |value|) ==> (((value[i] as int) == 32) || ((value[i] as int) == 9))))
+  ensures ((|res| > 0) ==> (((res[0] as int) != 32) && ((res[0] as int) != 9)))
+  ensures ((|res| > 0) ==> (((res[(|res| - 1)] as int) != 32) && ((res[(|res| - 1)] as int) != 9)))
 {
   var start := 0;
   var end := |value|;

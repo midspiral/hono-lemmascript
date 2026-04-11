@@ -81,6 +81,8 @@ const trimCookieWhitespace = (value: string): string => {
   //@ ensures \result.length <= value.length
   // CVE-2026-39410: only space (0x20) and tab (0x09) are stripped — nothing else (e.g. 0xA0) is removed.
   //@ ensures exists(start: int, exists(end: int, start >= 0 && start <= end && end <= value.length && \result === value.slice(start, end) && forall(i: int, i >= 0 && i < start ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09) && forall(i: int, i >= end && i < value.length ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09)))
+  //@ ensures \result.length > 0 ==> \result.charCodeAt(0) !== 0x20 && \result.charCodeAt(0) !== 0x09
+  //@ ensures \result.length > 0 ==> \result.charCodeAt(\result.length - 1) !== 0x20 && \result.charCodeAt(\result.length - 1) !== 0x09
   let start = 0
   let end = value.length
 
