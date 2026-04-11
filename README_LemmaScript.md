@@ -16,7 +16,7 @@ The old `.trim()` stripped Unicode whitespace including `\xA0` (non-breaking spa
 
 > **Every character trimmed is space (0x20) or tab (0x09) — nothing else is removed.**
 
-Annotated and verified directly in `src/utils/cookie.ts` — no separate verified file needed.
+Annotated and verified directly in [`src/utils/cookie.ts`](https://github.com/midspiral/hono-lemmascript/blob/lemmascript/src/utils/cookie.ts#L79) — no separate verified file needed.
 
 ## Setup
 
