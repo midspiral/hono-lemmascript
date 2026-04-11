@@ -8,6 +8,13 @@ datatype CookiePrefixOptions = host | secure
 
 method trimCookieWhitespace(value: string) returns (res: string)
   ensures (|res| <= |value|)
+  // CVE-2026-39410: only space (0x20) and tab (0x09) are stripped.
+  // Every skipped character is one of these two — nothing else (e.g. 0xA0) is removed.
+  ensures exists start: int, end: int ::
+    0 <= start <= end <= |value| &&
+    res == value[start..end] &&
+    (forall i :: 0 <= i < start ==> value[i] as int == 32 || value[i] as int == 9) &&
+    (forall i :: end <= i < |value| ==> value[i] as int == 32 || value[i] as int == 9)
 {
   var start := 0;
   var end := |value|;
@@ -15,6 +22,7 @@ method trimCookieWhitespace(value: string) returns (res: string)
     invariant (start >= 0)
     invariant (start <= end)
     invariant (end <= |value|)
+    invariant forall i :: 0 <= i < start ==> value[i] as int == 32 || value[i] as int == 9
   {
     var charCode := (value[start] as int);
     if ((charCode != 32) && (charCode != 9)) {
@@ -26,6 +34,8 @@ method trimCookieWhitespace(value: string) returns (res: string)
     invariant (start >= 0)
     invariant (start <= end)
     invariant (end <= |value|)
+    invariant forall i :: 0 <= i < start ==> value[i] as int == 32 || value[i] as int == 9
+    invariant forall i :: end <= i < |value| ==> value[i] as int == 32 || value[i] as int == 9
   {
     var charCode := (value[(end - 1)] as int);
     if ((charCode != 32) && (charCode != 9)) {
@@ -33,5 +43,7 @@ method trimCookieWhitespace(value: string) returns (res: string)
     }
     end := (end - 1);
   }
+  assert value[0..|value|] == value;
+  assert (start == 0 && end == |value|) ==> value == value[start..end];
   return if ((start == 0) && (end == |value|)) then value else value[start..end];
 }
