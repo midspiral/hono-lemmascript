@@ -77,10 +77,13 @@ const validCookieNameRegEx = /^[\w!#$%&'*.^`|~+-]+$/
 const validCookieValueRegEx = /^[ !#-:<-[\]-~]*$/
 
 const trimCookieWhitespace = (value: string): string => {
+  //@ verify
+  //@ ensures \result.length <= value.length
   let start = 0
   let end = value.length
 
   while (start < end) {
+    //@ invariant start >= 0 && start <= end && end <= value.length
     const charCode = value.charCodeAt(start)
     if (charCode !== 0x20 && charCode !== 0x09) {
       break
@@ -89,6 +92,7 @@ const trimCookieWhitespace = (value: string): string => {
   }
 
   while (end > start) {
+    //@ invariant start >= 0 && start <= end && end <= value.length
     const charCode = value.charCodeAt(end - 1)
     if (charCode !== 0x20 && charCode !== 0x09) {
       break
