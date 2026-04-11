@@ -1,12 +1,22 @@
-# Hono IP Restriction — Verified with LemmaScript
+# Hono — Verified with LemmaScript
 
-This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of the IP restriction middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). 49 Dafny lemmas, 0 errors. Verified functions are wired into the production code. [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
+This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of security-critical middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). 51 Dafny lemmas, 0 errors. Two CVEs verified. [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
 
-The IP restriction middleware recently had a fix for [CVE-2026-39409](https://github.com/honojs/hono/security/advisories/GHSA-3mpf-rcc7-5347) (incorrect IP matching for IPv4-mapped IPv6 addresses). An attacker could send a request from `::ffff:192.168.1.1` (an IPv4-mapped IPv6 address) and bypass an IPv4 restriction rule for `192.168.1.1`. The fix added detection and extraction of the IPv4 address from the mapped form. We formally verify the key property the fix depends on:
+### [CVE-2026-39409](https://github.com/honojs/hono/security/advisories/GHSA-3mpf-rcc7-5347) — IP restriction bypass via IPv4-mapped IPv6
+
+An attacker could send a request from `::ffff:192.168.1.1` and bypass an IPv4 restriction rule for `192.168.1.1`. We prove:
 
 > **For any IPv4 CIDR rule, matching a direct IPv4 address through the matcher gives the same result as matching its `::ffff:` mapped form.**
 
-This is the `matcherCIDREquivalence` lemma — proved automatically by Dafny over the actual matcher logic (`matchSingleCIDR`), including the `undefined` guard, bitwise mask comparison, and address family dispatch. Combined with `addIPv4StaticRule` (which proves both alias forms are in the static rule set), both data paths through the matcher are covered.
+Combined with `addIPv4StaticRule` (which proves both alias forms are in the static rule set), both data paths through the matcher are covered.
+
+### [CVE-2026-39410](https://github.com/honojs/hono/security/advisories/GHSA-r5rp-j6wh-rvv4) — Cookie name bypass via non-breaking space
+
+The old `.trim()` stripped Unicode whitespace including `\xA0` (non-breaking space), letting `\xA0sessionId=secret` bypass cookie name validation. The fix uses `trimCookieWhitespace` which only strips space and tab. We prove **in-place** in the production code:
+
+> **Every character trimmed is space (0x20) or tab (0x09) — nothing else is removed.**
+
+Annotated and verified directly in `src/utils/cookie.ts` — no separate verified file needed.
 
 ## Setup
 
@@ -97,6 +107,13 @@ Both data paths through the matcher are verified for IPv4/mapped-IPv6 equivalenc
 
 The remaining unverified part is the for loop and closure in `buildMatcher` itself — control flow, not data logic.
 
+### `trimCookieWhitespace` (`src/utils/cookie.ts`) — [CVE-2026-39410](https://github.com/honojs/hono/security/advisories/GHSA-r5rp-j6wh-rvv4)
+
+Verified **in-place** — annotations directly in the production source, no separate file.
+
+- **Result is a contiguous slice** of the input
+- **Only space (0x20) and tab (0x09) are stripped** — every character outside the result slice is one of these two. Non-breaking space (0xA0), the CVE attack vector, is provably never removed.
+
 ## File Structure
 
 ```
@@ -111,6 +128,8 @@ src/utils/
   ipaddr.ts                   ← Production IP utilities, imports from ipaddr.verified.ts
   ipaddr.verified.ts          ← IP functions + equivalence properties + cidrMask
   ipaddr.verified.dfy         ← Dafny verification (29 verified, 0 errors)
+  cookie.ts                   ← Production cookie parsing, annotated in-place
+  cookie.dfy                  ← Dafny verification (2 verified, 0 errors)
 ```
 
 ## How It Works
@@ -160,8 +179,13 @@ This case study drove several improvements to LemmaScript (Dafny backend):
 - **`BitAnd` and `Pow2` helpers:** `x & y` with variable masks emits `BitAnd(x, y)` (recursive binary decomposition); `x << n` with variable shift emits `x * Pow2(n)`
 - **`BigInt()` identity:** `BigInt(x)` emits `x` (both map to `int`)
 - **Optional narrowing fixes:** ternary `Some`/`None` wrapping, `=== undefined` codegen, early-return narrowing, pure function narrowing, `T` to `Option<T>` parameter coercion
+- **Arrow functions:** `const f = (...) => { //@ verify ... }` now extracted and verified
+- **`charCodeAt`:** `s.charCodeAt(i)` emits `s[i] as int`
+- **Multi-variable quantifiers:** nested `exists`/`forall` collapsed to `exists x, y ::` in Dafny
+- **Brownfield const filtering:** only consts referenced by verified functions are extracted
+- **Literal type widening:** `true`/`false` literal types map to `bool`
 
-See `LS_TODO.md` for remaining issues (arrow functions, cross-file imports, unreachable type extraction).
+See `LS_TODO.md` for remaining issues (cross-file imports, unreachable type extraction).
 
 ## Roadmap
 

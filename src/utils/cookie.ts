@@ -79,11 +79,14 @@ const validCookieValueRegEx = /^[ !#-:<-[\]-~]*$/
 const trimCookieWhitespace = (value: string): string => {
   //@ verify
   //@ ensures \result.length <= value.length
+  // CVE-2026-39410: only space (0x20) and tab (0x09) are stripped — nothing else (e.g. 0xA0) is removed.
+  //@ ensures exists(start: int, exists(end: int, start >= 0 && start <= end && end <= value.length && \result === value.slice(start, end) && forall(i: int, i >= 0 && i < start ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09) && forall(i: int, i >= end && i < value.length ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09)))
   let start = 0
   let end = value.length
 
   while (start < end) {
     //@ invariant start >= 0 && start <= end && end <= value.length
+    //@ invariant forall(i: int, i >= 0 && i < start ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09)
     const charCode = value.charCodeAt(start)
     if (charCode !== 0x20 && charCode !== 0x09) {
       break
@@ -93,6 +96,8 @@ const trimCookieWhitespace = (value: string): string => {
 
   while (end > start) {
     //@ invariant start >= 0 && start <= end && end <= value.length
+    //@ invariant forall(i: int, i >= 0 && i < start ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09)
+    //@ invariant forall(i: int, i >= end && i < value.length ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09)
     const charCode = value.charCodeAt(end - 1)
     if (charCode !== 0x20 && charCode !== 0x09) {
       break
@@ -100,6 +105,7 @@ const trimCookieWhitespace = (value: string): string => {
     end--
   }
 
+  //@ assert value.slice(0, value.length) === value
   return start === 0 && end === value.length ? value : value.slice(start, end)
 }
 
