@@ -68,7 +68,7 @@ function matchIPv4CIDR(remoteIPv4Addr: int, mask: int, maskedAddr: int): bool
 
 function matchSingleCIDR(rule: CIDRRule, remoteAddr: int, remoteIPv4Addr: Option<int>, remoteIsIPv4: bool): bool
   requires (remoteAddr >= 0)
-  requires ((match remoteIPv4Addr { case Some(i_) => true case None => false }) ==> (match remoteIPv4Addr { case Some(i_value) => (i_value >= 0) case None => false }))
+  requires (match remoteIPv4Addr { case Some(i_remoteIPv4Addr_val) => (i_remoteIPv4Addr_val >= 0) case None => true })
   requires (rule.mask >= 0)
   requires (rule.maskedAddr >= 0)
 {
