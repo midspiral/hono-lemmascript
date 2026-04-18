@@ -34,5 +34,5 @@ method trimCookieWhitespace(value: string) returns (res: string)
     end := (end - 1);
   }
   assert (value[0..|value|] == value);
-  return if ((start == 0) && (end == |value|)) then value else value[start..end];
+  return (if ((start == 0) && (end == |value|)) then value else value[start..end]);
 }
