@@ -30,6 +30,27 @@ const ENCODINGS_ORDERED_KEYS = Object.keys(ENCODINGS) as (keyof typeof ENCODINGS
 const DEFAULT_DOCUMENT = 'index.html'
 
 /**
+ * Decode the request path and reject any segment containing `.`, `..`, or
+ * runs of multiple slashes. Returns `undefined` on rejection — the caller
+ * routes to `onNotFound`. Decoding precedes the check (CVE-2024-32869),
+ * and the check also rejects repeated slashes (CVE-2026-39407).
+ */
+export const decodeAndValidatePath = (rawPath: string): string | undefined => {
+  //@ verify
+  //@ ensures \result !== undefined ==> \result === Decoded(rawPath) && !HasPathTraversal(\result)
+  //@ havoc
+  const filename = tryDecodeURI(rawPath)
+  //@ assume filename === Decoded(rawPath)
+  //@ havoc
+  const hasBad = /(?:^|[\/\\])\.{1,2}(?:$|[\/\\])|[\/\\]{2,}/.test(filename)
+  //@ assume hasBad === HasPathTraversal(filename)
+  if (hasBad) {
+    return undefined
+  }
+  return filename
+}
+
+/**
  * This middleware is not directly used by the user. Create a wrapper specifying `getContent()` by the environment such as Deno or Bun.
  */
 export const serveStatic = <E extends Env = Env>(
@@ -62,15 +83,12 @@ export const serveStatic = <E extends Env = Env>(
     if (options.path) {
       filename = options.path
     } else {
-      try {
-        filename = tryDecodeURI(c.req.path)
-        if (/(?:^|[\/\\])\.{1,2}(?:$|[\/\\])|[\/\\]{2,}/.test(filename)) {
-          throw new Error()
-        }
-      } catch {
+      const validated = decodeAndValidatePath(c.req.path)
+      if (validated === undefined) {
         await options.onNotFound?.(c.req.path, c)
         return next()
       }
+      filename = validated
     }
 
     let path = join(

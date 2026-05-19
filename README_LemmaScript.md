@@ -1,6 +1,6 @@
 # Hono — Verified with LemmaScript
 
-This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of security-critical middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). Two CVEs verified end-to-end, plus an in-place verification of `serveStatic`'s `..`-rejection check (first use of `//@ assume` and `//@ havoc`-on-assign). [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
+This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of security-critical middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). Four CVEs covered: IP restriction bypass and cookie name bypass (in-place, end-to-end, 51 Dafny lemmas); plus `serveStatic`'s URL-encoded directory traversal and repeated-slash bypass — verified as a composition proof on the decode-then-check pipeline, first use of `//@ assume` and `//@ havoc`-on-assign. [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
 
 ### [CVE-2026-39409](https://github.com/honojs/hono/security/advisories/GHSA-3mpf-rcc7-5347) — IP restriction bypass via IPv4-mapped IPv6
 
@@ -26,7 +26,17 @@ The `..`-rejection at the core of `serveStatic`'s path handling. We prove **in-p
 
 `ContainsParentDir` is a ghost predicate; the regex correctness is a named trust assumption (`hasParentDir === ContainsParentDir(filename)`) — explicit in the proof, auditable. The surrounding `.replace(...)` normalization is havoc'd; the ensures references the unchanged input.
 
-Annotated directly in [`src/utils/filepath.ts`](src/utils/filepath.ts) — first case study to use the new `//@ assume` and `//@ havoc`-on-assign. Broader CVE classes (URL-encoded bypass, repeated-slash bypass) live upstream in `serveStatic`'s decode-then-check pipeline; verifying that block is tracked as follow-up.
+Annotated directly in [`src/utils/filepath.ts`](src/utils/filepath.ts) — first case study to use the new `//@ assume` and `//@ havoc`-on-assign.
+
+### `serveStatic`'s decode-then-check pipeline — [CVE-2024-32869](https://github.com/honojs/hono/security/advisories/GHSA-q5w7-8mq6-2hxq) + [CVE-2026-39407](https://github.com/honojs/hono/security/advisories/GHSA-jw53-c2g8-vmwm)
+
+CVE-2024-32869 was a directory-traversal bypass via URL-encoded `..` (`%2e%2e`) — the fix added a `tryDecodeURI` step *before* the path-traversal regex check. CVE-2026-39407 added repeated-slash patterns to the same regex. We extract the check into `decodeAndValidatePath(rawPath)` and prove:
+
+> **`\result !== undefined ==> \result === Decoded(rawPath) && !HasPathTraversal(\result)`**
+
+`Decoded` and `HasPathTraversal` are ghost; the trust assumptions are inline (`filename === Decoded(rawPath)` after `tryDecodeURI`, `hasBad === HasPathTraversal(filename)` after the regex). The composition is what's verified: a buggy implementation that *skipped* the decode would fail the `\result === Decoded(rawPath)` clause; one that *checked before decoding* would fail `!HasPathTraversal(\result)` on `%2e%2e/...` inputs.
+
+Verified in [`src/middleware/serve-static/index.ts`](src/middleware/serve-static/index.ts) — minor extract refactor (the check is now a named helper called from `serveStatic`'s body; the original try/catch becomes an `=== undefined` check).
 
 ## Setup
 
