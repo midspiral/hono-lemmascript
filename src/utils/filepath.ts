@@ -3,6 +3,8 @@
  * FilePath utility.
  */
 
+//@ declare-type FilePathOptionsCore { filename: string, root: string | undefined }
+
 type FilePathOptions = {
   filename: string
   root?: string
@@ -32,26 +34,38 @@ export const getFilePath = (options: FilePathOptions): string | undefined => {
 export const getFilePathWithoutDefaultDocument = (
   options: Omit<FilePathOptions, 'defaultDocument'>
 ): string | undefined => {
+  //@ verify
+  //@ type options FilePathOptionsCore
+  //@ ensures \result !== undefined ==> !ContainsParentDir(options.filename)
   let root = options.root || ''
   let filename = options.filename
 
-  if (/(?:^|[\/\\])\.\.(?:$|[\/\\])/.test(filename)) {
+  // Security check: reject any `..` path segment in the input.
+  //@ havoc
+  const hasParentDir = /(?:^|[\/\\])\.\.(?:$|[\/\\])/.test(filename)
+  //@ assume hasParentDir === ContainsParentDir(filename)
+  if (hasParentDir) {
     return
   }
 
   // /foo.html => foo.html
+  //@ havoc
   filename = filename.replace(/^\.?[\/\\]/, '')
 
   // foo\bar.txt => foo/bar.txt
+  //@ havoc
   filename = filename.replace(/\\/, '/')
 
   // assets/ => assets
+  //@ havoc
   root = root.replace(/\/$/, '')
 
   // ./assets/foo.html => assets/foo.html
   let path = root ? root + '/' + filename : filename
+  //@ havoc
   path = path.replace(/^\.?\//, '')
 
+  //@ skip
   if (root[0] !== '/' && path[0] === '/') {
     return
   }

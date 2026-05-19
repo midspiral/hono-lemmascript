@@ -1,6 +1,6 @@
 # Hono — Verified with LemmaScript
 
-This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of security-critical middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). 51 Dafny lemmas, 0 errors. Two CVEs verified. [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
+This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of security-critical middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). Two CVEs verified end-to-end, plus an in-place verification of `serveStatic`'s `..`-rejection check (first use of `//@ assume` and `//@ havoc`-on-assign). [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
 
 ### [CVE-2026-39409](https://github.com/honojs/hono/security/advisories/GHSA-3mpf-rcc7-5347) — IP restriction bypass via IPv4-mapped IPv6
 
@@ -17,6 +17,16 @@ The old `.trim()` stripped Unicode whitespace including `\xA0` (non-breaking spa
 > **Every character trimmed is space (0x20) or tab (0x09) — nothing else is removed.**
 
 Annotated and verified directly in [`src/utils/cookie.ts`](https://github.com/midspiral/hono-lemmascript/blob/lemmascript/src/utils/cookie.ts#L79) — no separate verified file needed.
+
+### `..`-rejection check in `getFilePathWithoutDefaultDocument`
+
+The `..`-rejection at the core of `serveStatic`'s path handling. We prove **in-place**:
+
+> **`\result !== undefined ==> !ContainsParentDir(options.filename)`**
+
+`ContainsParentDir` is a ghost predicate; the regex correctness is a named trust assumption (`hasParentDir === ContainsParentDir(filename)`) — explicit in the proof, auditable. The surrounding `.replace(...)` normalization is havoc'd; the ensures references the unchanged input.
+
+Annotated directly in [`src/utils/filepath.ts`](src/utils/filepath.ts) — first case study to use the new `//@ assume` and `//@ havoc`-on-assign. Broader CVE classes (URL-encoded bypass, repeated-slash bypass) live upstream in `serveStatic`'s decode-then-check pipeline; verifying that block is tracked as follow-up.
 
 ## Setup
 
