@@ -54,7 +54,7 @@ export const getFilePathWithoutDefaultDocument = (
 
   // foo\bar.txt => foo/bar.txt
   //@ havoc
-  filename = filename.replace(/\\/, '/')
+  filename = filename.replace(/\\/g, '/')
 
   // assets/ => assets
   //@ havoc

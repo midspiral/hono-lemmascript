@@ -117,7 +117,7 @@ export const parse = (cookie: string, name?: string): Cookie => {
     return {}
   }
   const pairs = cookie.split(';')
-  const parsedCookie: Cookie = {}
+  const parsedCookie: Cookie = Object.create(null)
   for (const pairStr of pairs) {
     const valueStartPos = pairStr.indexOf('=')
     if (valueStartPos === -1) {
@@ -125,7 +125,11 @@ export const parse = (cookie: string, name?: string): Cookie => {
     }
 
     const cookieName = trimCookieWhitespace(pairStr.substring(0, valueStartPos))
-    if ((name && name !== cookieName) || !validCookieNameRegEx.test(cookieName)) {
+    if (
+      (name && name !== cookieName) ||
+      !validCookieNameRegEx.test(cookieName) ||
+      cookieName in parsedCookie
+    ) {
       continue
     }
 
@@ -150,7 +154,7 @@ export const parseSigned = async (
   secret: string | BufferSource,
   name?: string
 ): Promise<SignedCookie> => {
-  const parsedCookie: SignedCookie = {}
+  const parsedCookie: SignedCookie = Object.create(null)
   const secretKey = await getCryptoKey(secret)
 
   for (const [key, value] of Object.entries(parse(cookie, name))) {
@@ -199,7 +203,7 @@ const _serialize = (name: string, value: string, opt: CookieOptions = {}): strin
     }
   }
 
-  for (const key of ['domain', 'path'] as (keyof CookieOptions)[]) {
+  for (const key of ['domain', 'path', 'sameSite', 'priority'] as (keyof CookieOptions)[]) {
     if (opt[key] && /[;\r\n]/.test(opt[key] as string)) {
       throw new Error(`${key} must not contain ";", "\\r", or "\\n"`)
     }

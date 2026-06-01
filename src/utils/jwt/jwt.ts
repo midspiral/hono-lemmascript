@@ -128,14 +128,20 @@ export const verify = async (
     throw new JwtAlgorithmMismatch(alg, header.alg)
   }
   const now = Math.floor(Date.now() / 1000)
-  if (nbf && payload.nbf && payload.nbf > now) {
-    throw new JwtTokenNotBefore(token)
+  if (nbf && payload.nbf !== undefined) {
+    if (typeof payload.nbf !== 'number' || !Number.isFinite(payload.nbf) || payload.nbf > now) {
+      throw new JwtTokenNotBefore(token)
+    }
   }
-  if (exp && payload.exp && payload.exp <= now) {
-    throw new JwtTokenExpired(token)
+  if (exp && payload.exp !== undefined) {
+    if (typeof payload.exp !== 'number' || !Number.isFinite(payload.exp) || payload.exp <= now) {
+      throw new JwtTokenExpired(token)
+    }
   }
-  if (iat && payload.iat && now < payload.iat) {
-    throw new JwtTokenIssuedAt(now, payload.iat)
+  if (iat && payload.iat !== undefined) {
+    if (typeof payload.iat !== 'number' || !Number.isFinite(payload.iat) || now < payload.iat) {
+      throw new JwtTokenIssuedAt(now, payload.iat)
+    }
   }
   if (iss) {
     if (!payload.iss) {
