@@ -93,3 +93,25 @@ function matcherCIDREquivalence(
   //@ ensures \result === matchSingleCIDR(rule, MAPPED_PREFIX + ipv4Addr, resolveIPv4Addr(MAPPED_PREFIX + ipv4Addr, false), false)
   return matchSingleCIDR(rule, ipv4Addr, resolveIPv4Addr(ipv4Addr, true), true)
 }
+
+/**
+ * Static fast-path equivalence — the static-rule analog of matcherCIDREquivalence.
+ *
+ * registerStaticRule registers an IPv4 rule under two binary keys:
+ *   staticIPv4Rules <- ipv4binary
+ *   staticIPv6Rules <- (0xffffn << 32n) | ipv4binary   // this function
+ * For a 32-bit ipv4binary the prefix (bits 32-47) and the address (bits 0-31) are
+ * disjoint, so the OR is a genuine ::ffff: mapped address. This proves the IPv6 key
+ * resolves back to exactly the IPv4 key, so a remote seen as `::ffff:<ipv4>` matches
+ * the static rule iff the same remote seen as a direct `<ipv4>` does.
+ */
+function mappedIPv6StaticKey(ipv4binary: bigint): bigint {
+  //@ verify
+  //@ requires ipv4binary >= 0
+  //@ requires ipv4binary <= 0xffffffffn
+  //@ ensures \result === MAPPED_PREFIX + ipv4binary
+  //@ ensures \result >= 0
+  //@ ensures isIPv4MappedIPv6(\result)
+  //@ ensures convertIPv4MappedIPv6ToIPv4(\result) === ipv4binary
+  return (0xffffn << 32n) | ipv4binary
+}

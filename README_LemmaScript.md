@@ -115,6 +115,8 @@ The pre-fix code didn't resolve mapped addresses at all — it treated `::ffff:1
 
 `matcherCIDREquivalence` — proves that for any IPv4 CIDR rule, `matchSingleCIDR` gives the same result for a direct IPv4 address and its `::ffff:` mapped form.
 
+`mappedIPv6StaticKey` — the static-rule analog, covering the binary static fast-path (`staticIPv4Rules`/`staticIPv6Rules`) that upstream added to `buildMatcher`. It proves the IPv6 key `(0xffffn << 32n) | ipv4binary` registered for an IPv4 rule is a genuine `::ffff:` mapped address that resolves back to exactly the IPv4 key, so a remote arriving as `::ffff:<ipv4>` matches the static rule iff the direct `<ipv4>` does.
+
 ### CIDR mask computation (`src/utils/ipaddr.verified.ts`)
 
 `cidrMask` — the `((1n << prefix) - 1n) << (bits - prefix)` expression. Proved non-negative (required a manual `Pow2Positive` helper lemma — the only non-automatic proof in the case study).
@@ -142,7 +144,7 @@ src/middleware/ip-restriction/
   verified.ts                 ← Rule building (normalizeMappedCIDRMeta, ipv4StaticRuleAliases, addIPv4StaticRule)
   verified.dfy                ← Dafny verification (5 verified, 0 errors)
   matcher.verified.ts         ← Matcher CIDR check (matchSingleCIDR, matcherCIDREquivalence)
-  matcher.verified.dfy        ← Dafny verification (15 verified, 0 errors)
+  matcher.verified.dfy        ← Dafny verification (28 verified, 0 errors)
 
 src/utils/
   ipaddr.ts                   ← Production IP utilities, imports from ipaddr.verified.ts

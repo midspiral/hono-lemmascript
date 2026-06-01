@@ -10,6 +10,15 @@ function BitAnd(x: int, y: int): int
   else 2 * BitAnd(x / 2, y / 2) + (if x % 2 == 1 && y % 2 == 1 then 1 else 0)
 }
 
+function BitOr(x: int, y: int): int
+  requires x >= 0 && y >= 0
+  decreases x
+{
+  if x == 0 then y
+  else if y == 0 then x
+  else 2 * BitOr(x / 2, y / 2) + (if x % 2 == 1 || y % 2 == 1 then 1 else 0)
+}
+
 datatype CIDRRule = CIDRRule(isIPv4: bool, maskedAddr: int, mask: int)
 
 function isIPv4MappedIPv6(ipv6binary: int): bool
@@ -103,6 +112,23 @@ lemma matcherCIDREquivalence_ensures(rule: CIDRRule, ipv4Addr: int)
   requires (ipv4Addr >= 0)
   requires (ipv4Addr <= 4294967295)
   ensures (matcherCIDREquivalence(rule, ipv4Addr) == matchSingleCIDR(rule, (MAPPED_PREFIX + ipv4Addr), Some(resolveIPv4Addr((MAPPED_PREFIX + ipv4Addr), false)), false))
+{
+}
+
+function mappedIPv6StaticKey(ipv4binary: int): int
+  requires (ipv4binary >= 0)
+  requires (ipv4binary <= 4294967295)
+{
+  BitOr((65535 * 4294967296), ipv4binary)
+}
+
+lemma mappedIPv6StaticKey_ensures(ipv4binary: int)
+  requires (ipv4binary >= 0)
+  requires (ipv4binary <= 4294967295)
+  ensures (mappedIPv6StaticKey(ipv4binary) == (MAPPED_PREFIX + ipv4binary))
+  ensures (mappedIPv6StaticKey(ipv4binary) >= 0)
+  ensures isIPv4MappedIPv6(mappedIPv6StaticKey(ipv4binary))
+  ensures (convertIPv4MappedIPv6ToIPv4(mappedIPv6StaticKey(ipv4binary)) == ipv4binary)
 {
 }
 
