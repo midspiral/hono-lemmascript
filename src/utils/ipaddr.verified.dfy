@@ -22,6 +22,13 @@ function JSRem(a: int, b: int): int
   if a < 0 then -r else r
 }
 
+function JSTruncDiv(a: int, b: int): int
+  requires b != 0
+{
+  var q := (if a < 0 then -a else a) / (if b < 0 then -b else b);
+  if (a < 0) != (b < 0) then -q else q
+}
+
 function resolveIPv4Addr(remoteAddr: int, isIPv4: bool): int
   requires (remoteAddr >= 0)
   requires (isIPv4 ==> (remoteAddr <= 4294967295))
@@ -146,7 +153,7 @@ function isIPv4MappedIPv6(ipv6binary: int): bool
 
 lemma isIPv4MappedIPv6_ensures(ipv6binary: int)
   requires (ipv6binary >= 0)
-  ensures (isIPv4MappedIPv6(ipv6binary) == ((ipv6binary / 4294967296) == 65535))
+  ensures (isIPv4MappedIPv6(ipv6binary) == (JSTruncDiv(ipv6binary, 4294967296) == 65535))
 {
 }
 
