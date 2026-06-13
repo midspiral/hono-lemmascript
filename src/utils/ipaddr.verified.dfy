@@ -15,6 +15,13 @@ function BitAnd(x: int, y: int): int
   else 2 * BitAnd(x / 2, y / 2) + (if x % 2 == 1 && y % 2 == 1 then 1 else 0)
 }
 
+function JSRem(a: int, b: int): int
+  requires b != 0
+{
+  var r := (if a < 0 then -a else a) % (if b < 0 then -b else b);
+  if a < 0 then -r else r
+}
+
 function resolveIPv4Addr(remoteAddr: int, isIPv4: bool): int
   requires (remoteAddr >= 0)
   requires (isIPv4 ==> (remoteAddr <= 4294967295))
@@ -151,7 +158,7 @@ function convertIPv4MappedIPv6ToIPv4(ipv6binary: int): int
 
 lemma convertIPv4MappedIPv6ToIPv4_ensures(ipv6binary: int)
   requires (ipv6binary >= 0)
-  ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) == (ipv6binary % 4294967296))
+  ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) == JSRem(ipv6binary, 4294967296))
   ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) >= 0)
   ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) <= 4294967295)
 {

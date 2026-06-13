@@ -79,6 +79,13 @@ lemma BitOrPow2Split(high: int, low: int, k: nat)
   }
 }
 
+function JSRem(a: int, b: int): int
+  requires b != 0
+{
+  var r := (if a < 0 then -a else a) % (if b < 0 then -b else b);
+  if a < 0 then -r else r
+}
+
 datatype CIDRRule = CIDRRule(isIPv4: bool, maskedAddr: int, mask: int)
 
 function isIPv4MappedIPv6(ipv6binary: int): bool
@@ -101,7 +108,7 @@ function convertIPv4MappedIPv6ToIPv4(ipv6binary: int): int
 
 lemma convertIPv4MappedIPv6ToIPv4_ensures(ipv6binary: int)
   requires (ipv6binary >= 0)
-  ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) == (ipv6binary % 4294967296))
+  ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) == JSRem(ipv6binary, 4294967296))
   ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) >= 0)
   ensures (convertIPv4MappedIPv6ToIPv4(ipv6binary) <= 4294967295)
 {
