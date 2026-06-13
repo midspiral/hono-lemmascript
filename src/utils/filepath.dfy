@@ -9,7 +9,7 @@ ghost predicate ContainsParentDir(s: string)
 method getFilePathWithoutDefaultDocument(options: FilePathOptionsCore) returns (res: Option<string>)
   ensures (match res { case Some(i_result_val) => !(ContainsParentDir(options.filename)) case None => true })
 {
-  var root := (match options.root { case Some(i_value) => i_value case None => "" });
+  var root := (match options.root { case Some(i_value) => (if (|i_value| > 0) then i_value else "") case None => "" });
   var filename := options.filename;
   var hasParentDir: bool := *;
   assume {:axiom} (hasParentDir == ContainsParentDir(filename));
