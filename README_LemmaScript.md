@@ -1,6 +1,6 @@
 # Hono — Verified with LemmaScript
 
-[![LemmaScript: verified](https://img.shields.io/badge/LemmaScript-verified-brightgreen)](https://github.com/midspiral/hono-lemmascript/actions/workflows/lemmascript.yml)
+[![LemmaScript verified](https://img.shields.io/github/actions/workflow/status/midspiral/hono-lemmascript/lemmascript.yml?branch=lemmascript&label=LemmaScript%20verified)](https://github.com/midspiral/hono-lemmascript/actions/workflows/lemmascript.yml)
 
 
 This is a fork of [honojs/hono](https://github.com/honojs/hono) with formal verification of security-critical middleware using [LemmaScript](https://github.com/midspiral/LemmaScript) (Dafny backend). Four CVEs covered: IP restriction bypass and cookie name bypass (in-place, end-to-end, 51 Dafny lemmas); plus `serveStatic`'s URL-encoded directory traversal and repeated-slash bypass — verified as a composition proof on the decode-then-check pipeline, first use of `//@ assume` and `//@ havoc`-on-assign. [View as diff](https://github.com/midspiral/hono-lemmascript/compare/main..lemmascript).
