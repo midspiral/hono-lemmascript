@@ -28,6 +28,10 @@ describe('expandIPv6', () => {
     expect(expandIPv6('2001:0:0:db8::1')).toBe('2001:0000:0000:0db8:0000:0000:0000:0001')
     expect(expandIPv6('::ffff:127.0.0.1')).toBe('0000:0000:0000:0000:0000:ffff:7f00:0001')
   })
+
+  it('Should expand the unspecified address "::" to eight zero groups', () => {
+    expect(expandIPv6('::')).toBe('0000:0000:0000:0000:0000:0000:0000:0000')
+  })
 })
 describe('distinctRemoteAddr', () => {
   it('Should result be valid', () => {
@@ -131,5 +135,12 @@ describe('convertIPv6ToString', () => {
     ${'1:0:0:2:3:4:5:6'}                         | ${'1::2:3:4:5:6'}
   `('convertIPv6ToString($input) === $expected', ({ input, expected }) => {
     expect(convertIPv6BinaryToString(convertIPv6ToBinary(input))).toBe(expected)
+  })
+
+  it('Should compress the unspecified address (all zero groups) to "::"', () => {
+    expect(convertIPv6BinaryToString(0n)).toBe('::')
+    expect(convertIPv6BinaryToString(convertIPv6ToBinary('::'))).toBe('::')
+    // The output must round-trip back to the same binary value.
+    expect(convertIPv6ToBinary(convertIPv6BinaryToString(0n))).toBe(0n)
   })
 })

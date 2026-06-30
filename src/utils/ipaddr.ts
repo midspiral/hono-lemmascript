@@ -26,7 +26,10 @@ export const expandIPv6 = (ipV6: string): string => {
     if (node !== '') {
       sections[i] = node.padStart(4, '0')
     } else {
-      sections[i + 1] === '' && sections.splice(i + 1, 1)
+      // Keep a single empty slot for `::` zero expansion.
+      while (sections[i + 1] === '') {
+        sections.splice(i + 1, 1)
+      }
       sections[i] = new Array(8 - sections.length + 1).fill('0000').join(':')
     }
   }
@@ -311,6 +314,12 @@ export { isIPv4MappedIPv6, convertIPv4MappedIPv6ToIPv4, resolveIPv4Addr }
  * @return normalized IPv6 Address in string
  */
 export const convertIPv6BinaryToString = (ipV6: bigint): string => {
+  if (ipV6 === 0n) {
+    // The unspecified address compresses every group, which the generic
+    // logic below would render as a single ":". Handle it explicitly.
+    return '::'
+  }
+
   if (isIPv4MappedIPv6(ipV6)) {
     return `::ffff:${convertIPv4BinaryToString(convertIPv4MappedIPv6ToIPv4(ipV6))}`
   }

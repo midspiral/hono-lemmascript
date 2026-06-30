@@ -97,7 +97,7 @@ export interface ALBProxyEvent {
 }
 
 type WithHeaders = {
-  headers: Record<string, string>
+  headers: Record<string, string | string[]>
   multiValueHeaders?: undefined
 }
 type WithMultiValueHeaders = {
@@ -331,7 +331,11 @@ export abstract class EventProcessor<E extends LambdaEvent> {
     }
 
     if (event.body) {
-      requestInit.body = event.isBase64Encoded ? decodeBase64(event.body) : event.body
+      const body = event.isBase64Encoded
+        ? decodeBase64(event.body)
+        : new TextEncoder().encode(event.body)
+      requestInit.body = body
+      headers.set('content-length', body.length.toString())
     }
 
     return new Request(url, requestInit)
@@ -470,24 +474,17 @@ export class EventV1Processor extends EventProcessor<APIGatewayProxyEvent> {
   protected getHeaders(event: APIGatewayProxyEvent): Headers {
     const headers = new Headers()
     this.getCookies(event, headers)
-    if (event.headers) {
-      for (const [k, v] of Object.entries(event.headers)) {
-        if (v) {
-          headers.set(k, sanitizeHeaderValue(v))
-        }
-      }
-    }
     if (event.multiValueHeaders) {
       for (const [k, values] of Object.entries(event.multiValueHeaders)) {
         if (values) {
-          // avoid duplicating already set headers
-          const foundK = headers.get(k)
-          values.forEach((v) => {
-            const sanitizedValue = sanitizeHeaderValue(v)
-            return (
-              (!foundK || !foundK.includes(sanitizedValue)) && headers.append(k, sanitizedValue)
-            )
-          })
+          values.forEach((v) => headers.append(k, sanitizeHeaderValue(v)))
+        }
+      }
+    }
+    if (event.headers) {
+      for (const [k, v] of Object.entries(event.headers)) {
+        if (v && !headers.has(k)) {
+          headers.set(k, sanitizeHeaderValue(v))
         }
       }
     }
@@ -577,8 +574,7 @@ export class ALBProcessor extends EventProcessor<ALBProxyEvent> {
     if (result.multiValueHeaders) {
       result.multiValueHeaders['set-cookie'] = cookies
     } else {
-      // otherwise serialize the set-cookie
-      result.headers['set-cookie'] = cookies.join(', ')
+      result.headers['set-cookie'] = cookies[0]
     }
   }
 }
@@ -604,14 +600,7 @@ export class LatticeV2Processor extends EventProcessor<LatticeProxyEventV2> {
     if (event.headers) {
       for (const [k, values] of Object.entries(event.headers)) {
         if (values) {
-          // avoid duplicating already set headers
-          const foundK = headers.get(k)
-          values.forEach((v) => {
-            const sanitizedValue = sanitizeHeaderValue(v)
-            return (
-              (!foundK || !foundK.includes(sanitizedValue)) && headers.append(k, sanitizedValue)
-            )
-          })
+          values.forEach((v) => headers.append(k, sanitizeHeaderValue(v)))
         }
       }
     }
@@ -626,7 +615,7 @@ export class LatticeV2Processor extends EventProcessor<LatticeProxyEventV2> {
   protected setCookiesToResult(result: APIGatewayProxyResult, cookies: string[]): void {
     result.headers = {
       ...result.headers,
-      'set-cookie': cookies.join(', '),
+      'set-cookie': cookies,
     }
   }
 }

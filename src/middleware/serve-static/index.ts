@@ -42,7 +42,7 @@ export const decodeAndValidatePath = (rawPath: string): string | undefined => {
   const filename = tryDecodeURI(rawPath)
   //@ assume filename === Decoded(rawPath)
   //@ havoc
-  const hasBad = /(?:^|[\/\\])\.{1,2}(?:$|[\/\\])|[\/\\]{2,}/.test(filename)
+  const hasBad = /(?:^|[\/\\])\.{1,2}(?:$|[\/\\])|[\/\\]{2,}|\\/.test(filename)
   //@ assume hasBad === HasPathTraversal(filename)
   if (hasBad) {
     return undefined

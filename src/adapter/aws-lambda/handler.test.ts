@@ -1,4 +1,6 @@
+import { setCookie } from '../../helper/cookie'
 import { Hono } from '../../hono'
+import { bodyLimit } from '../../middleware/body-limit'
 import type { LambdaEvent, LatticeProxyEventV2 } from './handler'
 import {
   getProcessor,
@@ -264,6 +266,23 @@ describe('EventProcessor.createRequest', () => {
     })
   })
 
+  it('Should preserve every repeated header value for version 1.0 API Gateway event', () => {
+    const event: LambdaEvent = {
+      ...baseV1Event,
+      headers: {
+        'x-forwarded-for': '203.0.113.10',
+      },
+      multiValueHeaders: {
+        'x-forwarded-for': ['203.0.113.1', '203.0.113.10'],
+      },
+    }
+
+    const processor = getProcessor(event)
+    const request = processor.createRequest(event)
+
+    expect(request.headers.get('x-forwarded-for')).toEqual('203.0.113.1, 203.0.113.10')
+  })
+
   it('Should return valid Request object from version 2.0 API Gateway event', () => {
     const event: LambdaEvent = {
       ...baseV2Event,
@@ -296,6 +315,7 @@ describe('EventProcessor.createRequest', () => {
       'https://id.execute-api.us-east-1.amazonaws.com/my/path?parameter1=value1&parameter1=value2&parameter2=value'
     )
     expect(Object.fromEntries(request.headers)).toEqual({
+      'content-length': '17',
       'content-type': 'application/json',
       cookie: 'cookie1; cookie2',
       header1: 'value1',
@@ -341,12 +361,41 @@ describe('EventProcessor.createRequest', () => {
       'https://my-service-a1b2c3.x1y2z3.vpc-lattice-svcs.us-east-1.on.aws/my/path?parameter1=value1&parameter1=value2&parameter2=value'
     )
     expect(Object.fromEntries(request.headers)).toEqual({
+      'content-length': '17',
       'content-type': 'application/x-www-form-urlencoded',
       cookie: 'cookie1=value1; cookie2=value2',
       header1: 'value1',
       header2: 'value1, value2',
       host: 'my-service-a1b2c3.x1y2z3.vpc-lattice-svcs.us-east-1.on.aws',
     })
+  })
+
+  it('Should preserve every repeated header value for Lattice event', async () => {
+    const event: LatticeProxyEventV2 = {
+      version: '2.0',
+      path: '/my/path',
+      method: 'GET',
+      headers: {
+        host: ['example.test'],
+        'x-forwarded-for': ['203.0.113.1', '203.0.113.10'],
+      },
+      queryStringParameters: {},
+      body: null,
+      isBase64Encoded: false,
+      requestContext: {
+        serviceNetworkArn: '',
+        serviceArn: '',
+        targetGroupArn: '',
+        identity: {},
+        region: 'us-east-1',
+        timeEpoch: '1583348638390123',
+      },
+    }
+
+    const processor = getProcessor(event)
+    const request = processor.createRequest(event)
+
+    expect(request.headers.get('x-forwarded-for')).toEqual('203.0.113.1, 203.0.113.10')
   })
 
   describe('non-ASCII header value processing', () => {
@@ -396,6 +445,63 @@ describe('handle', () => {
     expect(result.body).toBe('Invalid request')
   })
 
+  it('ALB single-header: emits the first Set-Cookie intact, never comma-joined', async () => {
+    const app = new Hono()
+    app.get('/multi-cookie', (c) => {
+      setCookie(c, 'session', 'abc123', { expires: new Date('2026-06-09T00:00:00Z') })
+      setCookie(c, 'csrf', 'xyz789', { expires: new Date('2026-06-10T00:00:00Z') })
+      return c.text('ok')
+    })
+    const handler = handle(app)
+
+    const event = {
+      httpMethod: 'GET',
+      path: '/multi-cookie',
+      headers: { host: 'app.example.com' },
+      body: null,
+      isBase64Encoded: false,
+      requestContext: { elb: { targetGroupArn: 'arn:aws:elasticloadbalancing:...' } },
+    } as unknown as LambdaEvent
+
+    const result = await handler(event)
+
+    expect(result.headers!['set-cookie']).toBe(
+      'session=abc123; Path=/; Expires=Tue, 09 Jun 2026 00:00:00 GMT'
+    )
+  })
+
+  it('Lattice v2: emits multiple Set-Cookie as an array', async () => {
+    const app = new Hono()
+    app.get('/multi-cookie', (c) => {
+      setCookie(c, 'session', 'abc123')
+      setCookie(c, 'csrf', 'xyz789')
+      return c.text('ok')
+    })
+    const handler = handle(app)
+
+    const event: LatticeProxyEventV2 = {
+      version: '2.0',
+      path: '/multi-cookie',
+      method: 'GET',
+      headers: { host: ['app.example.com'] },
+      queryStringParameters: {},
+      body: null,
+      isBase64Encoded: false,
+      requestContext: {
+        serviceNetworkArn: '',
+        serviceArn: 'arn:aws:vpc-lattice:us-east-1:123456789012:service/svc-0a40',
+        targetGroupArn: '',
+        identity: {},
+        region: 'us-east-1',
+        timeEpoch: '1583348638390123',
+      },
+    }
+
+    const result = await handler(event)
+
+    expect(result.headers!['set-cookie']).toEqual(['session=abc123; Path=/', 'csrf=xyz789; Path=/'])
+  })
+
   it('Should return 400 when request contains invalid header names (v1)', async () => {
     const app = new Hono()
     app.get('/my/path', (c) => c.text('Hello'))
@@ -414,5 +520,35 @@ describe('handle', () => {
     const result = await handler(event)
     expect(result.statusCode).toBe(400)
     expect(result.body).toBe('Invalid request')
+  })
+
+  it('Should enforce bodyLimit when the client understates Content-Length', async () => {
+    const app = new Hono()
+    app.post(
+      '/upload',
+      bodyLimit({ maxSize: 1024, onError: (c) => c.text('too large', 413) }),
+      async (c) => c.json({ received: (await c.req.text()).length })
+    )
+    const handler = handle(app)
+
+    const event: LambdaEvent = {
+      ...baseV2Event,
+      rawPath: '/upload',
+      headers: { 'content-type': 'text/plain', 'content-length': '1' },
+      body: 'A'.repeat(10000),
+      requestContext: {
+        ...baseV2Event.requestContext,
+        http: {
+          method: 'POST',
+          path: '/upload',
+          protocol: 'HTTP/1.1',
+          sourceIp: '192.0.2.1',
+          userAgent: 'agent',
+        },
+      },
+    }
+
+    const result = await handler(event)
+    expect(result.statusCode).toBe(413)
   })
 })

@@ -1,6 +1,7 @@
 import { describe } from 'vitest'
 import { setCookie } from '../../helper/cookie'
 import { Hono } from '../../hono'
+import { bodyLimit } from '../../middleware/body-limit'
 import { encodeBase64 } from '../../utils/encode'
 import type { Callback, CloudFrontEdgeEvent } from './handler'
 import { createBody, handle, isContentTypeBinary } from './handler'
@@ -89,6 +90,36 @@ describe('handle', () => {
     expect(res.body).toBe('https://hono.dev/test-path')
   })
 
+  it('Should preserve all values of a multi-value request header', async () => {
+    const app = new Hono()
+    app.get('/test-path', (c) => c.text(c.req.header('x-forwarded-for') ?? ''))
+    const handler = handle(app)
+
+    const event: CloudFrontEdgeEvent = {
+      Records: [
+        {
+          cf: {
+            ...cloudFrontEdgeEvent.Records[0].cf,
+            request: {
+              ...cloudFrontEdgeEvent.Records[0].cf.request,
+              headers: {
+                host: [{ key: 'Host', value: 'hono.dev' }],
+                'x-forwarded-for': [
+                  { key: 'X-Forwarded-For', value: '10.0.0.1' },
+                  { key: 'X-Forwarded-For', value: '192.168.1.1' },
+                  { key: 'X-Forwarded-For', value: '203.0.113.55' },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    }
+
+    const res = await handler(event)
+    expect(res.body).toBe('10.0.0.1, 192.168.1.1, 203.0.113.55')
+  })
+
   it('Should expose async handler arity compatible with NODEJS_24_X', () => {
     const app = new Hono()
     const handler = handle(app)
@@ -151,5 +182,44 @@ describe('handle', () => {
         },
       ],
     })
+  })
+
+  it('Should enforce bodyLimit when the client understates Content-Length', async () => {
+    const app = new Hono()
+    app.post(
+      '/upload',
+      bodyLimit({ maxSize: 1024, onError: (c) => c.text('too large', 413) }),
+      async (c) => c.json({ received: (await c.req.text()).length })
+    )
+    const handler = handle(app)
+
+    const event: CloudFrontEdgeEvent = {
+      Records: [
+        {
+          cf: {
+            ...cloudFrontEdgeEvent.Records[0].cf,
+            request: {
+              ...cloudFrontEdgeEvent.Records[0].cf.request,
+              method: 'POST',
+              uri: '/upload',
+              headers: {
+                host: [{ key: 'Host', value: 'hono.dev' }],
+                'content-type': [{ key: 'Content-Type', value: 'text/plain' }],
+                'content-length': [{ key: 'Content-Length', value: '1' }],
+              },
+              body: {
+                inputTruncated: false,
+                action: 'read-only',
+                encoding: 'text',
+                data: 'A'.repeat(10000),
+              },
+            },
+          },
+        },
+      ],
+    }
+
+    const res = await handler(event)
+    expect(res.status).toBe('413')
   })
 })
