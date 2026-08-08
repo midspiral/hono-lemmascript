@@ -67,6 +67,7 @@ const verifySignature = async (
 
 // all alphanumeric chars and all of _!#$%&'*.^`|~+-
 // (see: https://datatracker.ietf.org/doc/html/rfc6265#section-4.1.1)
+//@ skip
 const validCookieNameRegEx = /^[\w!#$%&'*.^`|~+-]+$/
 
 // all ASCII chars 32-126 except 34, 59, and 92 (i.e. space to tilde but not double quote, semicolon, or backslash)
@@ -74,6 +75,7 @@ const validCookieNameRegEx = /^[\w!#$%&'*.^`|~+-]+$/
 //
 // note: the spec also prohibits comma and space, but we allow both since they are very common in the real world
 // (see: https://github.com/golang/go/issues/7243)
+//@ skip
 const validCookieValueRegEx = /^[ !#-:<-[\]-~]*$/
 
 const trimCookieWhitespace = (value: string): string => {
