@@ -11,16 +11,16 @@ export function normalizeMappedCIDRMeta(
   isMappedIPv6: boolean
 ): NormalizedMappedCIDRMeta {
   //@ verify
-  //@ requires type === 'IPv4' ==> prefix >= 0 && prefix <= 32
-  //@ requires type === 'IPv6' ==> prefix >= 0 && prefix <= 128
-  //@ ensures type === 'IPv4' ==> \result.isIPv4 === true
-  //@ ensures type === 'IPv4' ==> \result.prefix === prefix
-  //@ ensures type === 'IPv6' && !(isMappedIPv6 && prefix >= 96) ==> \result.isIPv4 === false
-  //@ ensures type === 'IPv6' && !(isMappedIPv6 && prefix >= 96) ==> \result.prefix === prefix
-  //@ ensures type === 'IPv6' && isMappedIPv6 && prefix >= 96 ==> \result.isIPv4 === true
-  //@ ensures type === 'IPv6' && isMappedIPv6 && prefix >= 96 ==> \result.prefix === prefix - 96
-  //@ ensures \result.isIPv4 ==> \result.prefix >= 0 && \result.prefix <= 32
-  //@ ensures !\result.isIPv4 ==> \result.prefix >= 0 && \result.prefix <= 128
+  //@ requires implies(type === "IPv4", prefix >= 0 && prefix <= 32)
+  //@ requires implies(type === "IPv6", prefix >= 0 && prefix <= 128)
+  //@ ensures implies(type === "IPv4", $result.isIPv4 === true)
+  //@ ensures implies(type === "IPv4", $result.prefix === prefix)
+  //@ ensures implies(type === "IPv6" && !(isMappedIPv6 && prefix >= 96), $result.isIPv4 === false)
+  //@ ensures implies(type === "IPv6" && !(isMappedIPv6 && prefix >= 96), $result.prefix === prefix)
+  //@ ensures implies(type === "IPv6" && isMappedIPv6 && prefix >= 96, $result.isIPv4 === true)
+  //@ ensures implies(type === "IPv6" && isMappedIPv6 && prefix >= 96, $result.prefix === prefix - 96)
+  //@ ensures implies($result.isIPv4, $result.prefix >= 0 && $result.prefix <= 32)
+  //@ ensures implies(!$result.isIPv4, $result.prefix >= 0 && $result.prefix <= 128)
   if (type === 'IPv4') {
     return {
       isIPv4: true,
@@ -43,9 +43,9 @@ export function normalizeMappedCIDRMeta(
 
 export function ipv4StaticRuleAliases(rule: string): string[] {
   //@ verify
-  //@ ensures \result.length === 2
-  //@ ensures \result[0] === rule
-  //@ ensures \result[1] === '::ffff:' + rule
+  //@ ensures $result.length === 2
+  //@ ensures $result[0] === rule
+  //@ ensures $result[1] === "::ffff:" + rule
   return [rule, `::ffff:${rule}`]
 }
 
@@ -55,8 +55,8 @@ export function ipv4StaticRuleAliases(rule: string): string[] {
  */
 export function addIPv4StaticRule(rules: Set<string>, rule: string): Set<string> {
   //@ verify
-  //@ ensures \result.has(rule)
-  //@ ensures \result.has('::ffff:' + rule)
+  //@ ensures $result.has(rule)
+  //@ ensures $result.has("::ffff:" + rule)
   const aliases = ipv4StaticRuleAliases(rule)
   rules.add(aliases[0])
   rules.add(aliases[1])

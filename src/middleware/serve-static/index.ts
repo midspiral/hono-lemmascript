@@ -37,7 +37,7 @@ const DEFAULT_DOCUMENT = 'index.html'
  */
 export const decodeAndValidatePath = (rawPath: string): string | undefined => {
   //@ verify
-  //@ ensures \result !== undefined ==> \result === Decoded(rawPath) && !HasPathTraversal(\result)
+  //@ ensures implies($result !== undefined, $result === Decoded(rawPath) && !HasPathTraversal($result))
   //@ havoc
   const filename = tryDecodeURI(rawPath)
   //@ assume filename === Decoded(rawPath)

@@ -36,7 +36,7 @@ export const getFilePathWithoutDefaultDocument = (
 ): string | undefined => {
   //@ verify
   //@ type options FilePathOptionsCore
-  //@ ensures \result !== undefined ==> !ContainsParentDir(options.filename)
+  //@ ensures implies($result !== undefined, !ContainsParentDir(options.filename))
   let root = options.root || ''
   let filename = options.filename
 

@@ -3,26 +3,26 @@
 function isIPv4MappedIPv6(ipv6binary: bigint): boolean {
   //@ verify
   //@ requires ipv6binary >= 0
-  //@ ensures \result === (ipv6binary / 0x100000000n === 0xffffn)
+  //@ ensures $result === (ipv6binary / 4294967296n === 65535n)
   return ipv6binary >> 32n === 0xffffn
 }
 
 function convertIPv4MappedIPv6ToIPv4(ipv6binary: bigint): bigint {
   //@ verify
   //@ requires ipv6binary >= 0
-  //@ ensures \result === ipv6binary % 0x100000000n
-  //@ ensures \result >= 0
-  //@ ensures \result <= 0xffffffffn
+  //@ ensures $result === ipv6binary % 4294967296n
+  //@ ensures $result >= 0
+  //@ ensures $result <= 4294967295n
   return ipv6binary & 0xffffffffn
 }
 
 function resolveIPv4Addr(remoteAddr: bigint, isIPv4: boolean): bigint {
   //@ verify
   //@ requires remoteAddr >= 0
-  //@ requires isIPv4 ==> remoteAddr <= 0xffffffffn
-  //@ requires !isIPv4 ==> isIPv4MappedIPv6(remoteAddr)
-  //@ ensures \result >= 0
-  //@ ensures \result <= 0xffffffffn
+  //@ requires implies(isIPv4, remoteAddr <= 4294967295n)
+  //@ requires implies(!isIPv4, isIPv4MappedIPv6(remoteAddr))
+  //@ ensures $result >= 0
+  //@ ensures $result <= 4294967295n
   if (isIPv4) return remoteAddr
   return convertIPv4MappedIPv6ToIPv4(remoteAddr)
 }
@@ -59,7 +59,7 @@ function matchSingleCIDR(
 ): boolean {
   //@ verify
   //@ requires remoteAddr >= 0
-  //@ requires remoteIPv4Addr !== undefined ==> remoteIPv4Addr >= 0
+  //@ requires implies(remoteIPv4Addr !== undefined, remoteIPv4Addr >= 0)
   //@ requires rule.mask >= 0
   //@ requires rule.maskedAddr >= 0
   if (rule.isIPv4) {
@@ -90,7 +90,7 @@ function matcherCIDREquivalence(
   //@ requires rule.mask >= 0
   //@ requires rule.maskedAddr >= 0
   //@ requires ipv4Addr >= 0 && ipv4Addr <= 0xffffffffn
-  //@ ensures \result === matchSingleCIDR(rule, MAPPED_PREFIX + ipv4Addr, resolveIPv4Addr(MAPPED_PREFIX + ipv4Addr, false), false)
+  //@ ensures $result === matchSingleCIDR(rule, MAPPED_PREFIX + ipv4Addr, resolveIPv4Addr(MAPPED_PREFIX + ipv4Addr, false), false)
   return matchSingleCIDR(rule, ipv4Addr, resolveIPv4Addr(ipv4Addr, true), true)
 }
 
@@ -109,9 +109,9 @@ function mappedIPv6StaticKey(ipv4binary: bigint): bigint {
   //@ verify
   //@ requires ipv4binary >= 0
   //@ requires ipv4binary <= 0xffffffffn
-  //@ ensures \result === MAPPED_PREFIX + ipv4binary
-  //@ ensures \result >= 0
-  //@ ensures isIPv4MappedIPv6(\result)
-  //@ ensures convertIPv4MappedIPv6ToIPv4(\result) === ipv4binary
+  //@ ensures $result === MAPPED_PREFIX + ipv4binary
+  //@ ensures $result >= 0
+  //@ ensures isIPv4MappedIPv6($result)
+  //@ ensures convertIPv4MappedIPv6ToIPv4($result) === ipv4binary
   return (0xffffn << 32n) | ipv4binary
 }

@@ -165,9 +165,9 @@ src/utils/
      type: AddressType, prefix: number, isMappedIPv6: boolean
    ): NormalizedMappedCIDRMeta {
      //@ verify
-     //@ requires type === 'IPv4' ==> prefix >= 0 && prefix <= 32
-     //@ requires type === 'IPv6' ==> prefix >= 0 && prefix <= 128
-     //@ ensures \result.isIPv4 ==> \result.prefix >= 0 && \result.prefix <= 32
+     //@ requires implies(type === "IPv4", prefix >= 0 && prefix <= 32)
+     //@ requires implies(type === "IPv6", prefix >= 0 && prefix <= 128)
+     //@ ensures implies($result.isIPv4, $result.prefix >= 0 && $result.prefix <= 32)
      ...
    }
    ```

@@ -80,17 +80,17 @@ const validCookieValueRegEx = /^[ !#-:<-[\]-~]*$/
 
 const trimCookieWhitespace = (value: string): string => {
   //@ verify
-  //@ ensures \result.length <= value.length
+  //@ ensures $result.length <= value.length
   // CVE-2026-39410: only space (0x20) and tab (0x09) are stripped — nothing else (e.g. 0xA0) is removed.
-  //@ ensures exists(start: int, exists(end: int, start >= 0 && start <= end && end <= value.length && \result === value.slice(start, end) && forall(i: int, i >= 0 && i < start ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09) && forall(i: int, i >= end && i < value.length ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09)))
-  //@ ensures \result.length > 0 ==> \result.charCodeAt(0) !== 0x20 && \result.charCodeAt(0) !== 0x09
-  //@ ensures \result.length > 0 ==> \result.charCodeAt(\result.length - 1) !== 0x20 && \result.charCodeAt(\result.length - 1) !== 0x09
+  //@ ensures exists((start: int) => exists((end: int) => start >= 0 && start <= end && end <= value.length && $result === value.slice(start, end) && forall((i: int) => implies(i >= 0 && i < start, value.charCodeAt(i) === 32 || value.charCodeAt(i) === 9)) && forall((i: int) => implies(i >= end && i < value.length, value.charCodeAt(i) === 32 || value.charCodeAt(i) === 9))))
+  //@ ensures implies($result.length > 0, $result.charCodeAt(0) !== 32 && $result.charCodeAt(0) !== 9)
+  //@ ensures implies($result.length > 0, $result.charCodeAt($result.length - 1) !== 32 && $result.charCodeAt($result.length - 1) !== 9)
   let start = 0
   let end = value.length
 
   while (start < end) {
     //@ invariant start >= 0 && start <= end && end <= value.length
-    //@ invariant forall(i: int, i >= 0 && i < start ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09)
+    //@ invariant forall((i: int) => implies(i >= 0 && i < start, value.charCodeAt(i) === 32 || value.charCodeAt(i) === 9))
     const charCode = value.charCodeAt(start)
     if (charCode !== 0x20 && charCode !== 0x09) {
       break
@@ -100,8 +100,8 @@ const trimCookieWhitespace = (value: string): string => {
 
   while (end > start) {
     //@ invariant start >= 0 && start <= end && end <= value.length
-    //@ invariant forall(i: int, i >= 0 && i < start ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09)
-    //@ invariant forall(i: int, i >= end && i < value.length ==> value.charCodeAt(i) === 0x20 || value.charCodeAt(i) === 0x09)
+    //@ invariant forall((i: int) => implies(i >= 0 && i < start, value.charCodeAt(i) === 32 || value.charCodeAt(i) === 9))
+    //@ invariant forall((i: int) => implies(i >= end && i < value.length, value.charCodeAt(i) === 32 || value.charCodeAt(i) === 9))
     const charCode = value.charCodeAt(end - 1)
     if (charCode !== 0x20 && charCode !== 0x09) {
       break
